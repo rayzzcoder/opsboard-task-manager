@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart'; // 1. Import provider
 import 'firebase_options.dart';
+import 'providers/task_provider.dart'; // 2. Import our new provider
 import 'screens/login_screen.dart';
 
 void main() async {
@@ -20,14 +22,20 @@ class TaskManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Task Manager',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        // Using the recommended layout theme structure
-        appBarTheme: const AppBarTheme(centerTitle: true),
+    // 3. Wrap MaterialApp in ChangeNotifierProvider
+    return ChangeNotifierProvider(
+      create: (context) => TaskProvider(),
+      child: MaterialApp(
+        title: 'OpsBoard',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          useMaterial3: true,
+          // Using the recommended layout theme structure
+          appBarTheme: const AppBarTheme(centerTitle: true),
+        ),
+        home: const LoginScreen(),
       ),
-      home: const LoginScreen(),
     );
   }
 }

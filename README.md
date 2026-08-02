@@ -6,6 +6,48 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 5 (Command Center UI & Full Integration)
+* **Current State:** Built the enterprise-grade `DashboardScreen` UI. Integrated live real-time streams via `Consumer` and `TaskProvider`. Added a professional incident reporting modal with severity levels (Low, Medium, High, Critical) and status lifecycle pipelines (Open, In Progress, Resolved).
+* **Completed Files:**
+    * `lib/services/auth_service.dart`
+    * `lib/services/firestore_service.dart`
+    * `lib/providers/task_provider.dart`
+    * `lib/main.dart`
+    * `lib/screens/login_screen.dart`
+    * `lib/screens/signup_screen.dart`
+    * `lib/screens/dashboard_screen.dart`
+    * `lib/models/task_model.dart`
+    * `README.md` (Cumulative Tracker)
+* **Packages Added:** `firebase_auth`, `cloud_firestore`, `provider`
+* **Status:** Fully Functional & Production-Ready Architecture.
+
+---
+
+---
+
+## Project Progress & Changelog
+
+### 📝 OpsBoard Progress Report: Module 4 (State Management Layer)
+* **Current State:** Integrated the `provider` package. Created `TaskProvider` (extending `ChangeNotifier`) to handle local state and manage Firestore data mutations cleanly. Registered the provider globally in `main.dart` using `ChangeNotifierProvider`.
+* **Completed Files:**
+    * `lib/services/auth_service.dart`
+    * `lib/services/firestore_service.dart`
+    * `lib/providers/task_provider.dart`
+    * `lib/main.dart`
+    * `lib/screens/login_screen.dart`
+    * `lib/screens/dashboard_screen.dart`
+    * `lib/screens/signup_screen.dart`
+    * `lib/models/task_model.dart`
+    * `README.md` (Cumulative Tracker)
+* **Packages Added:** `firebase_auth`, `cloud_firestore`, `provider`
+* **Next Immediate Step:** Build the Dashboard Command Center UI to consume live data streams from the `TaskProvider`.
+
+---
+
+---
+
+## Project Progress & Changelog
+
 ### 📝 OpsBoard Progress Report: Module 3 (Firestore Service Layer)
 * **Current State:** Decoupled database operations from the UI. Created `FirestoreService` to handle secure, authenticated CRUD operations (Real-time stream, Add, Update, Delete) targeted to the user's specific subcollection.
 * **Completed Files:**

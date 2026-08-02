@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../providers/task_provider.dart';
+import '../models/task_model.dart';
 import 'login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -11,173 +13,239 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final TextEditingController _taskController = TextEditingController();
-
-  // This is the function that talks to Firestore!
-  Future<void> _addTask(String taskTitle) async {
-    if (taskTitle.trim().isEmpty) return;
-
-    // 1. Get the logged-in user's UID
-    final String? uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    // 2. Push the data to the Firestore database
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('tasks')
-        .add({
-      'title': taskTitle.trim(),
-      'isCompleted': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    // 3. Clear the text field after saving
-    _taskController.clear();
-  }
-
-  // --- UPDATE (Toggle Checkbox) ---
-  Future<void> _toggleTaskStatus(String taskId, bool currentStatus) async {
-    final String? uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('tasks')
-        .doc(taskId) // Target the exact task document
-        .update({
-      'isCompleted': !currentStatus, // Flip the boolean
-    });
-  }
-
-  // --- DELETE (Remove Task) ---
-  Future<void> _deleteTask(String taskId) async {
-    final String? uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('tasks')
-        .doc(taskId) // Target the exact task document
-        .delete();
-  }
-
-  // UI for the popup box to type a new task
-  void _showAddTaskDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Task'),
-        content: TextField(
-          controller: _taskController,
-          decoration: const InputDecoration(hintText: 'Enter task name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _addTask(_taskController.text);
-              Navigator.pop(context); // Close the popup
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
-  void dispose() {
-    _taskController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    // Trigger loading tasks as soon as the dashboard initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TaskProvider>(context, listen: false).loadUserTasks();
+    });
+  }
+
+  // Helper method to assign colors based on incident severity
+  Color _getSeverityColor(String severity) {
+    switch (severity.toLowerCase()) {
+      case 'critical':
+        return Colors.red.shade700;
+      case 'high':
+        return Colors.orange.shade800;
+      case 'medium':
+        return Colors.amber.shade700;
+      default:
+        return Colors.blue.shade600;
+    }
+  }
+
+  // Function to show a modal bottom sheet for adding a new incident
+  void _showAddTaskModal(BuildContext context) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    String selectedSeverity = 'Medium';
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 24,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Report New Incident',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Incident Title',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Description / Details',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedSeverity,
+                    decoration: const InputDecoration(
+                      labelText: 'Severity Level',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ['Low', 'Medium', 'High', 'Critical'].map((level) {
+                      return DropdownMenuItem(value: level, child: Text(level));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() => selectedSeverity = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: Colors.blueGrey,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      if (titleController.text.trim().isEmpty) return;
+
+                      Provider.of<TaskProvider>(context, listen: false).createNewTask(
+                        title: titleController.text.trim(),
+                        description: descController.text.trim(),
+                        severity: selectedSeverity,
+                        userId: currentUserId,
+                      );
+
+                      Navigator.pop(context);
+                    },
+                    child: const Text('SUBMIT INCIDENT', style: TextStyle(fontSize: 16)),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Dashboard'),
+        title: const Text('OpsBoard Command Center', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.blueGrey.shade900,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              if (!context.mounted) return;
+              if (!mounted) return;
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
             },
-          )
+          ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        // 1. Point the stream to the logged-in user's tasks folder
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
-            .collection('tasks')
-            .orderBy('createdAt', descending: true) // Newest tasks at the top
-            .snapshots(),
-        builder: (context, snapshot) {
-          // 2. Handle loading and error states
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong.'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Consumer<TaskProvider>(
+        builder: (context, taskProvider, child) {
+          if (taskProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // 3. Extract the list of documents
-          final tasks = snapshot.data?.docs ?? [];
+          final tasks = taskProvider.tasks;
 
-          // 4. Show a message if the folder is empty
           if (tasks.isEmpty) {
-            return const Center(
-              child: Text(
-                'No tasks yet. Add one!',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_outline, size: 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Active Incidents Reported',
+                    style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Tap the "+" button below to log a new ticket.'),
+                ],
               ),
             );
           }
 
-          // 5. Build the list view lazily for good performance
           return ListView.builder(
             itemCount: tasks.length,
+            padding: const EdgeInsets.all(12),
             itemBuilder: (context, index) {
-              final taskDoc = tasks[index];
-              final taskData = taskDoc.data() as Map<String, dynamic>;
-
+              final TaskModel task = tasks[index];
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: ListTile(
-                  title: Text(
-                    taskData['title'] ?? 'Untitled Task',
-                    style: TextStyle(
-                      decoration: taskData['isCompleted'] == true
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                    ),
-                  ),
-                  leading: Checkbox(
-                    value: taskData['isCompleted'] ?? false,
-                    onChanged: (bool? newValue) {
-                      // Pass the document ID and current status
-                      _toggleTaskStatus(taskDoc.id, taskData['isCompleted'] ?? false);
-                    },
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      // Pass the document ID to delete it
-                      _deleteTask(taskDoc.id);
-                    },
+                elevation: 3,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getSeverityColor(task.severity),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              task.severity.toUpperCase(),
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        task.description,
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Status pipeline selector
+                          DropdownButton<String>(
+                            value: task.status,
+                            underline: const SizedBox(),
+                            items: ['Open', 'In Progress', 'Resolved'].map((status) {
+                              return DropdownMenuItem(
+                                value: status,
+                                child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                              );
+                            }).toList(),
+                            onChanged: (newStatus) {
+                              if (newStatus != null) {
+                                taskProvider.changeTaskStatus(task.id, newStatus);
+                              }
+                            },
+                          ),
+                          // Delete action button
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            onPressed: () => taskProvider.removeTask(task.id),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -185,10 +253,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
-      // The '+' button
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskDialog,
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddTaskModal(context),
+        backgroundColor: Colors.blueGrey.shade900,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New Incident'),
       ),
     );
   }
