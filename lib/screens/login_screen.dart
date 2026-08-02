@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
+import 'signup_screen.dart'; // Import the signup screen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,14 +15,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // 1. Initialize our new AuthService
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
-      // 2. Call the service instead of Firebase directly
       await _authService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text.trim(),
@@ -96,8 +95,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _login,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.blueGrey,
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('LOGIN', style: TextStyle(fontSize: 16)),
+              ),
+              const SizedBox(height: 16),
+              // Navigation link to SignupScreen
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignupScreen()),
+                  );
+                },
+                child: const Text("Don't have an account? Sign Up"),
               ),
             ],
           ),
