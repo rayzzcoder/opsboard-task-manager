@@ -1,47 +1,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/task_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Helper getter to secure the current user's task subcollection path
-  CollectionReference<Map<String, dynamic>>? get _tasksRef {
-    final String? uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return null;
-    return _db.collection('users').doc(uid).collection('tasks');
+  // --- FIX: Global Operations Board ---
+  // We removed the user ID requirement. Now, every single user (Admins and Agents)
+  // points to the exact same global 'tasks' collection!
+  CollectionReference<Map<String, dynamic>> get _tasksRef {
+    return _db.collection('tasks');
   }
 
-  // 1. READ: Stream tasks in real-time (newest first)
+  // 1. READ: Stream global tasks in real-time
   Stream<List<TaskModel>> getTasks() {
-    final ref = _tasksRef;
-    if (ref == null) return Stream.value([]);
-
-    return ref.orderBy('createdAt', descending: true).snapshots().map((snapshot) {
+    return _tasksRef.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         return TaskModel.fromMap(doc.data(), doc.id);
       }).toList();
     });
   }
 
-  // 2. CREATE: Add a new incident/task
+  // 2. CREATE: Add a new incident/task to the global board
   Future<void> addTask(TaskModel task) async {
-    final ref = _tasksRef;
-    if (ref == null) return;
-    await ref.add(task.toMap());
+    await _tasksRef.add(task.toMap());
   }
 
   // 3. UPDATE: Modify specific fields (e.g., status, severity, title)
   Future<void> updateTask(String taskId, Map<String, dynamic> updatedData) async {
-    final ref = _tasksRef;
-    if (ref == null) return;
-    await ref.doc(taskId).update(updatedData);
+    await _tasksRef.doc(taskId).update(updatedData);
   }
 
   // 4. DELETE: Remove an incident document
   Future<void> deleteTask(String taskId) async {
-    final ref = _tasksRef;
-    if (ref == null) return;
-    await ref.doc(taskId).delete();
+    await _tasksRef.doc(taskId).delete();
   }
 }

@@ -8,31 +8,26 @@ class TaskProvider extends ChangeNotifier {
   List<TaskModel> _tasks = [];
   bool _isLoading = false;
 
-  // --- NEW: Filter State ---
   String _currentFilter = 'All';
 
   String get currentFilter => _currentFilter;
 
   void setFilter(String filter) {
     _currentFilter = filter;
-    notifyListeners(); // Tell the UI to redraw with the new filter
+    notifyListeners();
   }
 
-  // This getter returns the filtered list instead of the raw list
   List<TaskModel> get filteredTasks {
     if (_currentFilter == 'All') return _tasks;
     if (_currentFilter == 'Critical') {
       return _tasks.where((t) => t.severity.toLowerCase() == 'critical').toList();
     }
-    // Otherwise, filter by status ('Open', 'In Progress', 'Resolved')
     return _tasks.where((t) => t.status == _currentFilter).toList();
   }
-  // -------------------------
 
   List<TaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
 
-  // Analytics Getters
   int get totalActiveIncidents => _tasks.where((task) => task.status != 'Resolved').length;
 
   int get criticalAlerts => _tasks.where((task) =>
@@ -42,6 +37,7 @@ class TaskProvider extends ChangeNotifier {
   int get resolvedIncidents => _tasks.where((task) => task.status == 'Resolved').length;
 
   void loadUserTasks() {
+    _currentFilter = 'All'; // --- FIX: Instantly resets the filter on login/logout! ---
     _isLoading = true;
     notifyListeners();
 

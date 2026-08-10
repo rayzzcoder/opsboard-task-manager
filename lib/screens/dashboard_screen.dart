@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/task_model.dart';
@@ -14,12 +15,33 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  String _userRole = 'Agent';
+  String _userTeam = 'Unassigned'; // --- NEW: Store the user's team ---
+
   @override
   void initState() {
     super.initState();
+    _fetchUserRole();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TaskProvider>(context, listen: false).loadUserTasks();
     });
+  }
+
+  Future<void> _fetchUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        if (doc.exists && mounted) {
+          setState(() {
+            _userRole = doc.data()?['role'] ?? 'Agent';
+            _userTeam = doc.data()?['team'] ?? 'Unassigned'; // --- NEW: Fetch their team ---
+          });
+        }
+      } catch (e) {
+        debugPrint("Error fetching role: $e");
+      }
+    }
   }
 
   Color _getSeverityColor(String severity) {
@@ -156,7 +178,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // --- UPDATED: Severity and Team Routing Dropdowns side-by-side ---
                   Row(
                     children: [
                       Expanded(
@@ -208,7 +229,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  // -----------------------------------------------------------------
 
                   const SizedBox(height: 24),
                   ElevatedButton(
@@ -220,7 +240,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: () {
                       if (titleController.text.trim().isEmpty) return;
 
-                      // Passing the new selectedAssignee to the provider!
                       Provider.of<TaskProvider>(context, listen: false).createNewTask(
                         title: titleController.text.trim(),
                         description: descController.text.trim(),
@@ -247,7 +266,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OpsBoard Command Center', style: TextStyle(fontWeight: FontWeight.bold)),
+        // --- NEW: Shows exact Role AND Team ---
+        title: Text('OpsBoard ($_userRole - $_userTeam)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.blueGrey.shade900,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -344,12 +364,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 8),
                             Text(
                               task.description,
-                              // Using a dynamic color here so it looks good in light and dark mode
                               style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14),
                             ),
                             const SizedBox(height: 12),
 
-                            // --- NEW: Team Badge UI ---
                             Row(
                               children: [
                                 Icon(Icons.assignment_ind_outlined, size: 16, color: Colors.blueGrey.shade400),
@@ -360,7 +378,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
-                            // --------------------------
 
                             const SizedBox(height: 8),
                             const Divider(),
@@ -370,22 +387,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 DropdownButton<String>(
                                   value: task.status,
                                   underline: const SizedBox(),
+                                  // --- NEW: STRICT SECURITY CHECK ---
+                                  // Only Admin, or an Agent assigned to THIS team, can edit status!
+                                  onChanged: (_userRole == 'Admin' || (_userRole == 'Agent' && task.assignee == _userTeam))
+                                      ? (newStatus) {
+                                    if (newStatus != null) {
+                                      taskProvider.changeTaskStatus(task.id, newStatus);
+                                    }
+                                  }
+                                      : null, // Otherwise disable the dropdown!
+                                  // ----------------------------------
                                   items: ['Open', 'In Progress', 'Resolved'].map((status) {
                                     return DropdownMenuItem(
                                       value: status,
                                       child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                                     );
                                   }).toList(),
-                                  onChanged: (newStatus) {
-                                    if (newStatus != null) {
-                                      taskProvider.changeTaskStatus(task.id, newStatus);
-                                    }
-                                  },
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                  onPressed: () => taskProvider.removeTask(task.id),
-                                ),
+                                if (_userRole == 'Admin')
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    onPressed: () => taskProvider.removeTask(task.id),
+                                  )
+                                else
+                                  const SizedBox(width: 48),
                               ],
                             ),
                           ],
@@ -399,13 +424,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: _userRole == 'Admin'
+          ? FloatingActionButton.extended(
         onPressed: () => _showAddTaskModal(context),
         backgroundColor: Colors.blueGrey.shade900,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('New Incident'),
-      ),
+      )
+          : null,
     );
   }
 }
