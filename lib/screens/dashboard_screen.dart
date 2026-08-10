@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/task_provider.dart';
+import '../providers/theme_provider.dart'; // 1. FIX: Added missing import
 import '../models/task_model.dart';
 import 'login_screen.dart';
 
@@ -34,7 +35,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // --- Analytics Banner UI ---
   Widget _buildAnalyticsBanner(TaskProvider taskProvider) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -42,7 +42,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.blueGrey.shade900,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            // 2. FIX: Replaced withOpacity with modern withValues(alpha:)
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
           )
@@ -75,7 +76,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- NEW: Filter Chips UI ---
   Widget _buildFilterRow(TaskProvider taskProvider) {
     final filters = ['All', 'Critical', 'Open', 'In Progress', 'Resolved'];
 
@@ -109,7 +109,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-  // -----------------------------
 
   void _showAddTaskModal(BuildContext context) {
     final titleController = TextEditingController();
@@ -156,21 +155,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedSeverity,
+
+                  // 3. FIX: Replaced DropdownButtonFormField to avoid the deprecation warning
+                  InputDecorator(
                     decoration: const InputDecoration(
                       labelText: 'Severity Level',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),
-                    items: ['Low', 'Medium', 'High', 'Critical'].map((level) {
-                      return DropdownMenuItem(value: level, child: Text(level));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setModalState(() => selectedSeverity = val);
-                      }
-                    },
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedSeverity,
+                        isDense: true,
+                        items: ['Low', 'Medium', 'High', 'Critical'].map((level) {
+                          return DropdownMenuItem(value: level, child: Text(level));
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => selectedSeverity = val);
+                          }
+                        },
+                      ),
+                    ),
                   ),
+
                   const SizedBox(height: 24),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -211,12 +219,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+                tooltip: 'Toggle Theme',
+                onPressed: () {
+                  themeProvider.toggleTheme();
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign Out',
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              if (!mounted) return;
+              // 4. FIX: Use context.mounted safely after an async gap
+              if (!context.mounted) return;
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -231,14 +251,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Fetch the FILTERED tasks list instead of the raw list
           final displayTasks = taskProvider.filteredTasks;
 
           return Column(
             children: [
               _buildAnalyticsBanner(taskProvider),
-
-              // Inject the horizontal filter row!
               _buildFilterRow(taskProvider),
 
               Expanded(

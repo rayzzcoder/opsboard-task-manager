@@ -6,6 +6,15 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 8 (Dynamic Theme Engine)
+* **Current State:** Implemented a global `ThemeProvider` utilizing `MultiProvider` to allow dynamic state switching. Integrated modern Material 3 `ThemeData` auto-theming, successfully removing SDK deprecation warnings. Added a seamless Light/Dark mode toggle to the Dashboard app bar.
+* **Completed Files:**
+  * `lib/providers/theme_provider.dart`
+  * `lib/main.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 7 (Dynamic Filtering Engine)
 * **Current State:** Implemented state-based filtering within `TaskProvider` to sort incidents in memory, eliminating redundant database reads. Added an interactive `ChoiceChip` row to the Dashboard UI, allowing users to instantly filter tasks by 'All', 'Critical', 'Open', 'In Progress', and 'Resolved'.
 * **Completed Files:**
@@ -83,8 +92,6 @@ A professional, feature-driven Flutter application designed to track operational
     * `README.md` (Cumulative Tracker)
 * **Packages Added:** `firebase_auth`, `cloud_firestore`
 * **Next Immediate Step:** Build the state management layer (Provider) to connect our `FirestoreService` data streams to the UI screens.
-
----
 
 ---
 

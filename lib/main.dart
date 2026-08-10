@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart'; // 1. Import provider
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-import 'providers/task_provider.dart'; // 2. Import our new provider
+import 'providers/task_provider.dart';
+import 'providers/theme_provider.dart'; // Import the new theme provider
 import 'screens/login_screen.dart';
 
 void main() async {
-  // Ensure widget binding is initialized before Firebase
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase using the generated options
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -22,19 +21,39 @@ class TaskManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 3. Wrap MaterialApp in ChangeNotifierProvider
-    return ChangeNotifierProvider(
-      create: (context) => TaskProvider(),
-      child: MaterialApp(
-        title: 'OpsBoard',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          useMaterial3: true,
-          // Using the recommended layout theme structure
-          appBarTheme: const AppBarTheme(centerTitle: true),
-        ),
-        home: const LoginScreen(),
+    // Use MultiProvider to provide both Task and Theme state globally
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => TaskProvider()),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+      ],
+      // Consumer listens to ThemeProvider changes and redraws MaterialApp
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'OpsBoard',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeProvider.themeMode, // Dynamically switches
+
+            // --- LIGHT THEME ---
+            theme: ThemeData(
+              useMaterial3: true,
+              colorSchemeSeed: Colors.blueGrey,
+              brightness: Brightness.light,
+              appBarTheme: const AppBarTheme(centerTitle: true),
+            ),
+
+            // --- DARK THEME ---
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              colorSchemeSeed: Colors.blueGrey,
+              brightness: Brightness.dark,
+              appBarTheme: const AppBarTheme(centerTitle: true),
+            ),
+
+            home: const LoginScreen(),
+          );
+        },
       ),
     );
   }
