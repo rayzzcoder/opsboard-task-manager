@@ -11,7 +11,16 @@ class TaskProvider extends ChangeNotifier {
   List<TaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
 
-  // Listen to live stream of tasks from Firestore
+  // --- Analytics Getters ---
+  int get totalActiveIncidents => _tasks.where((task) => task.status != 'Resolved').length;
+
+  int get criticalAlerts => _tasks.where((task) =>
+  task.severity.toLowerCase() == 'critical' && task.status != 'Resolved'
+  ).length;
+
+  int get resolvedIncidents => _tasks.where((task) => task.status == 'Resolved').length;
+  // -------------------------
+
   void loadUserTasks() {
     _isLoading = true;
     notifyListeners();
@@ -26,7 +35,6 @@ class TaskProvider extends ChangeNotifier {
     });
   }
 
-  // Add a new incident
   Future<void> createNewTask({
     required String title,
     required String description,
@@ -38,19 +46,17 @@ class TaskProvider extends ChangeNotifier {
       title: title,
       description: description,
       severity: severity,
-      status: 'Open', // Default pipeline state
+      status: 'Open',
       userId: userId,
     );
 
     await _firestoreService.addTask(newTask);
   }
 
-  // Update task status (e.g., Open -> In Progress -> Resolved)
   Future<void> changeTaskStatus(String taskId, String newStatus) async {
     await _firestoreService.updateTask(taskId, {'status': newStatus});
   }
 
-  // Delete an incident
   Future<void> removeTask(String taskId) async {
     await _firestoreService.deleteTask(taskId);
   }

@@ -16,13 +16,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Trigger loading tasks as soon as the dashboard initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TaskProvider>(context, listen: false).loadUserTasks();
     });
   }
 
-  // Helper method to assign colors based on incident severity
   Color _getSeverityColor(String severity) {
     switch (severity.toLowerCase()) {
       case 'critical':
@@ -36,7 +34,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Function to show a modal bottom sheet for adding a new incident
+  // --- NEW: Analytics Banner UI Components ---
+  Widget _buildAnalyticsBanner(TaskProvider taskProvider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade900,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _statColumn('Active', taskProvider.totalActiveIncidents, Colors.lightBlueAccent),
+          _statColumn('Critical', taskProvider.criticalAlerts, Colors.redAccent),
+          _statColumn('Resolved', taskProvider.resolvedIncidents, Colors.greenAccent),
+        ],
+      ),
+    );
+  }
+
+  Widget _statColumn(String label, int count, Color color) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade400),
+        ),
+      ],
+    );
+  }
+  // ------------------------------------------
+
   void _showAddTaskModal(BuildContext context) {
     final titleController = TextEditingController();
     final descController = TextEditingController();
@@ -135,6 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('OpsBoard Command Center', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blueGrey.shade900,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -158,98 +198,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           final tasks = taskProvider.tasks;
 
-          if (tasks.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_outline, size: 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Active Incidents Reported',
-                    style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Tap the "+" button below to log a new ticket.'),
-                ],
-              ),
-            );
-          }
+          return Column(
+            children: [
+              // Inject the banner at the top!
+              _buildAnalyticsBanner(taskProvider),
 
-          return ListView.builder(
-            itemCount: tasks.length,
-            padding: const EdgeInsets.all(12),
-            itemBuilder: (context, index) {
-              final TaskModel task = tasks[index];
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+              Expanded(
+                child: tasks.isEmpty
+                    ? Center(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              task.title,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getSeverityColor(task.severity),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              task.severity.toUpperCase(),
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
+                      Icon(Icons.check_circle_outline, size: 80, color: Colors.grey.shade400),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No Active Incidents Reported',
+                        style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        task.description,
-                        style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Status pipeline selector
-                          DropdownButton<String>(
-                            value: task.status,
-                            underline: const SizedBox(),
-                            items: ['Open', 'In Progress', 'Resolved'].map((status) {
-                              return DropdownMenuItem(
-                                value: status,
-                                child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                              );
-                            }).toList(),
-                            onChanged: (newStatus) {
-                              if (newStatus != null) {
-                                taskProvider.changeTaskStatus(task.id, newStatus);
-                              }
-                            },
-                          ),
-                          // Delete action button
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                            onPressed: () => taskProvider.removeTask(task.id),
-                          ),
-                        ],
-                      ),
+                      const Text('Tap the "+" button below to log a new ticket.'),
                     ],
                   ),
+                )
+                    : ListView.builder(
+                  itemCount: tasks.length,
+                  padding: const EdgeInsets.all(12),
+                  itemBuilder: (context, index) {
+                    final TaskModel task = tasks[index];
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    task.title,
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getSeverityColor(task.severity),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    task.severity.toUpperCase(),
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              task.description,
+                              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                DropdownButton<String>(
+                                  value: task.status,
+                                  underline: const SizedBox(),
+                                  items: ['Open', 'In Progress', 'Resolved'].map((status) {
+                                    return DropdownMenuItem(
+                                      value: status,
+                                      child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (newStatus) {
+                                    if (newStatus != null) {
+                                      taskProvider.changeTaskStatus(task.id, newStatus);
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                  onPressed: () => taskProvider.removeTask(task.id),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
       ),
