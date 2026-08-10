@@ -8,6 +8,7 @@ class TaskModel {
   final String status;   // Open, In Progress, Resolved
   final DateTime? createdAt;
   final String userId;
+  final String assignee;
 
   TaskModel({
     required this.id,
@@ -17,6 +18,7 @@ class TaskModel {
     required this.status,
     this.createdAt,
     required this.userId,
+    required this.assignee,
   });
 
   // Convert Firestore Document to a TaskModel object (Deserialization)
@@ -29,6 +31,7 @@ class TaskModel {
       status: map['status'] ?? 'Open',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
       userId: map['userId'] ?? '',
+      assignee: map['assignee'] ?? 'Unassigned',
     );
   }
 
@@ -41,6 +44,7 @@ class TaskModel {
       'status': status,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
       'userId': userId,
+      'assignee': assignee,
     };
   }
 }

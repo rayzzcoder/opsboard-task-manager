@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/task_provider.dart';
-import '../providers/theme_provider.dart'; // 1. FIX: Added missing import
+import '../providers/theme_provider.dart';
 import '../models/task_model.dart';
 import 'login_screen.dart';
 
@@ -42,7 +42,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: Colors.blueGrey.shade900,
         boxShadow: [
           BoxShadow(
-            // 2. FIX: Replaced withOpacity with modern withValues(alpha:)
             color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -114,6 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     String selectedSeverity = 'Medium';
+    String selectedAssignee = 'Unassigned';
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     showModalBottomSheet(
@@ -156,28 +156,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 3. FIX: Replaced DropdownButtonFormField to avoid the deprecation warning
-                  InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Severity Level',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedSeverity,
-                        isDense: true,
-                        items: ['Low', 'Medium', 'High', 'Critical'].map((level) {
-                          return DropdownMenuItem(value: level, child: Text(level));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setModalState(() => selectedSeverity = val);
-                          }
-                        },
+                  // --- UPDATED: Severity and Team Routing Dropdowns side-by-side ---
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Severity',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedSeverity,
+                              isDense: true,
+                              items: ['Low', 'Medium', 'High', 'Critical'].map((level) {
+                                return DropdownMenuItem(value: level, child: Text(level));
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setModalState(() => selectedSeverity = val);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Assign To',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedAssignee,
+                              isDense: true,
+                              items: ['Unassigned', 'Alpha Team', 'Bravo Team', 'Cyber Sec', 'Net Ops'].map((team) {
+                                return DropdownMenuItem(value: team, child: Text(team));
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setModalState(() => selectedAssignee = val);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  // -----------------------------------------------------------------
 
                   const SizedBox(height: 24),
                   ElevatedButton(
@@ -189,11 +220,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: () {
                       if (titleController.text.trim().isEmpty) return;
 
+                      // Passing the new selectedAssignee to the provider!
                       Provider.of<TaskProvider>(context, listen: false).createNewTask(
                         title: titleController.text.trim(),
                         description: descController.text.trim(),
                         severity: selectedSeverity,
                         userId: currentUserId,
+                        assignee: selectedAssignee,
                       );
 
                       Navigator.pop(context);
@@ -235,7 +268,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Sign Out',
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              // 4. FIX: Use context.mounted safely after an async gap
               if (!context.mounted) return;
               Navigator.pushReplacement(
                 context,
@@ -312,9 +344,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 8),
                             Text(
                               task.description,
-                              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                              // Using a dynamic color here so it looks good in light and dark mode
+                              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14),
                             ),
                             const SizedBox(height: 12),
+
+                            // --- NEW: Team Badge UI ---
+                            Row(
+                              children: [
+                                Icon(Icons.assignment_ind_outlined, size: 16, color: Colors.blueGrey.shade400),
+                                const SizedBox(width: 6),
+                                Text(
+                                  task.assignee,
+                                  style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                            // --------------------------
+
+                            const SizedBox(height: 8),
                             const Divider(),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,

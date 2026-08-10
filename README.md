@@ -6,6 +6,15 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 9 (Team Routing & Assignment)
+* **Current State:** Expanded `TaskModel` and `TaskProvider` to include an `assignee` field for team routing. Enhanced the Dashboard UI with a dual-dropdown layout for Severity and Team Assignment, and added dynamic visual Assignment Badges to the incident cards.
+* **Completed Files:**
+  * `lib/models/task_model.dart`
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 8 (Dynamic Theme Engine)
 * **Current State:** Implemented a global `ThemeProvider` utilizing `MultiProvider` to allow dynamic state switching. Integrated modern Material 3 `ThemeData` auto-theming, successfully removing SDK deprecation warnings. Added a seamless Light/Dark mode toggle to the Dashboard app bar.
 * **Completed Files:**

@@ -60,6 +60,7 @@ class TaskProvider extends ChangeNotifier {
     required String description,
     required String severity,
     required String userId,
+    required String assignee,
   }) async {
     final newTask = TaskModel(
       id: '',
@@ -68,6 +69,7 @@ class TaskProvider extends ChangeNotifier {
       severity: severity,
       status: 'Open',
       userId: userId,
+      assignee: assignee,
     );
 
     await _firestoreService.addTask(newTask);
