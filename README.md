@@ -6,7 +6,13 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
-## Project Progress & Changelog
+### 📝 OpsBoard Progress Report: Module 7 (Dynamic Filtering Engine)
+* **Current State:** Implemented state-based filtering within `TaskProvider` to sort incidents in memory, eliminating redundant database reads. Added an interactive `ChoiceChip` row to the Dashboard UI, allowing users to instantly filter tasks by 'All', 'Critical', 'Open', 'In Progress', and 'Resolved'.
+* **Completed Files:**
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
 
 ### 📝 OpsBoard Progress Report: Module 6 (Operations Analytics Banner)
 * **Current State:** Integrated real-time statistical aggregations into `TaskProvider` (computed getters for Active, Critical alerts, and Resolved tickets). Enhanced `DashboardScreen` with a sleek, dark analytics header displaying live operational metrics at a glance.

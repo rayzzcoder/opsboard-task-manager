@@ -34,7 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // --- NEW: Analytics Banner UI Components ---
+  // --- Analytics Banner UI ---
   Widget _buildAnalyticsBanner(TaskProvider taskProvider) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -74,7 +74,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-  // ------------------------------------------
+
+  // --- NEW: Filter Chips UI ---
+  Widget _buildFilterRow(TaskProvider taskProvider) {
+    final filters = ['All', 'Critical', 'Open', 'In Progress', 'Resolved'];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Row(
+        children: filters.map((filter) {
+          final isSelected = taskProvider.currentFilter == filter;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ChoiceChip(
+              label: Text(
+                  filter,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.blueGrey.shade800,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  )
+              ),
+              selected: isSelected,
+              selectedColor: Colors.blueGrey.shade700,
+              backgroundColor: Colors.grey.shade200,
+              onSelected: (selected) {
+                if (selected) {
+                  taskProvider.setFilter(filter);
+                }
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+  // -----------------------------
 
   void _showAddTaskModal(BuildContext context) {
     final titleController = TextEditingController();
@@ -196,35 +231,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final tasks = taskProvider.tasks;
+          // Fetch the FILTERED tasks list instead of the raw list
+          final displayTasks = taskProvider.filteredTasks;
 
           return Column(
             children: [
-              // Inject the banner at the top!
               _buildAnalyticsBanner(taskProvider),
 
+              // Inject the horizontal filter row!
+              _buildFilterRow(taskProvider),
+
               Expanded(
-                child: tasks.isEmpty
+                child: displayTasks.isEmpty
                     ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle_outline, size: 80, color: Colors.grey.shade400),
+                      Icon(Icons.search_off, size: 80, color: Colors.grey.shade400),
                       const SizedBox(height: 16),
                       Text(
-                        'No Active Incidents Reported',
+                        'No incidents match this filter',
                         style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                       ),
-                      const SizedBox(height: 8),
-                      const Text('Tap the "+" button below to log a new ticket.'),
                     ],
                   ),
                 )
                     : ListView.builder(
-                  itemCount: tasks.length,
-                  padding: const EdgeInsets.all(12),
+                  itemCount: displayTasks.length,
+                  padding: const EdgeInsets.only(left: 12, right: 12, bottom: 80),
                   itemBuilder: (context, index) {
-                    final TaskModel task = tasks[index];
+                    final TaskModel task = displayTasks[index];
                     return Card(
                       elevation: 3,
                       margin: const EdgeInsets.symmetric(vertical: 8),
