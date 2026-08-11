@@ -37,7 +37,7 @@ class TaskProvider extends ChangeNotifier {
   int get resolvedIncidents => _tasks.where((task) => task.status == 'Resolved').length;
 
   void loadUserTasks() {
-    _currentFilter = 'All'; // --- FIX: Instantly resets the filter on login/logout! ---
+    _currentFilter = 'All';
     _isLoading = true;
     notifyListeners();
 
@@ -70,6 +70,23 @@ class TaskProvider extends ChangeNotifier {
 
     await _firestoreService.addTask(newTask);
   }
+
+  // --- NEW: Full Edit Capability ---
+  Future<void> editTaskDetails({
+    required String taskId,
+    required String title,
+    required String description,
+    required String severity,
+    required String assignee,
+  }) async {
+    await _firestoreService.updateTask(taskId, {
+      'title': title,
+      'description': description,
+      'severity': severity,
+      'assignee': assignee,
+    });
+  }
+  // ---------------------------------
 
   Future<void> changeTaskStatus(String taskId, String newStatus) async {
     await _firestoreService.updateTask(taskId, {'status': newStatus});
