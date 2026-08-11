@@ -4,8 +4,8 @@ class TaskModel {
   final String id;
   final String title;
   final String description;
-  final String severity; // Low, Medium, High, Critical
-  final String status;   // Open, In Progress, Resolved
+  final String severity;
+  final String status;
   final DateTime? createdAt;
   final String userId;
   final String assignee;
@@ -21,7 +21,6 @@ class TaskModel {
     required this.assignee,
   });
 
-  // Convert Firestore Document to a TaskModel object (Deserialization)
   factory TaskModel.fromMap(Map<String, dynamic> map, String documentId) {
     return TaskModel(
       id: documentId,
@@ -35,7 +34,6 @@ class TaskModel {
     );
   }
 
-  // Convert TaskModel object to a Map for Firestore (Serialization)
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -46,5 +44,20 @@ class TaskModel {
       'userId': userId,
       'assignee': assignee,
     };
+  }
+
+  // --- UPDATED: Safe getter for the UI that includes Time! ---
+  String get formattedDate {
+    if (createdAt == null) return "Just now";
+
+    // Get the hour and minute
+    final hour = createdAt!.hour;
+    final minute = createdAt!.minute.toString().padLeft(2, '0'); // Adds a leading zero (e.g., 12:05)
+    final period = hour >= 12 ? 'PM' : 'AM';
+
+    // Convert 24-hour time to standard 12-hour time
+    final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+
+    return "${createdAt!.month}/${createdAt!.day}/${createdAt!.year}  •  $displayHour:$minute $period";
   }
 }

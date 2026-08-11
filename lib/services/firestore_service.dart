@@ -8,10 +8,10 @@ class FirestoreService {
     return _db.collection('tasks');
   }
 
-  // --- NEW: Added limit parameter for Pagination ---
   Stream<List<TaskModel>> getTasks(int documentLimit) {
     return _tasksRef
-        .limit(documentLimit) // Only fetch the exact amount we ask for!
+        .orderBy('createdAt', descending: true) // FIX: This must go BEFORE .snapshots()!
+        .limit(documentLimit)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {

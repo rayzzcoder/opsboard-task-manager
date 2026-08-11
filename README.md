@@ -6,6 +6,16 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 14 (Chronological Ordering & Data Safeguards)
+* **Current State:** Upgraded the database schema and UI to support precise chronological incident tracking. Integrated a `createdAt` timestamp in `TaskModel` with 12-hour AM/PM formatting. Updated `FirestoreService` to enforce `.orderBy()` sorting, ensuring the newest incidents always render at the top of the global board. Implemented a robust `AlertDialog` guardrail in the UI to prevent accidental deletions by Admins.
+* **Completed Files:**
+    * `lib/models/task_model.dart`
+    * `lib/services/firestore_service.dart`
+    * `lib/providers/task_provider.dart`
+    * `lib/screens/dashboard_screen.dart`
+    * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 13 (Infinite Scrolling & Pagination)
 * **Current State:** Engineered stream-based pagination to handle enterprise-scale ticket volumes without performance degradation or excessive database reads. Integrated a `ScrollController` in `DashboardScreen` to detect scroll boundaries, and dynamically manage a `StreamSubscription` in `TaskProvider` that scales the Firestore document limit seamlessly.
 * **Completed Files:**

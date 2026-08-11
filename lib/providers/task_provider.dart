@@ -99,6 +99,7 @@ class TaskProvider extends ChangeNotifier {
       status: 'Open',
       userId: userId,
       assignee: assignee,
+      createdAt: DateTime.now(),
     );
     await _firestoreService.addTask(newTask);
   }

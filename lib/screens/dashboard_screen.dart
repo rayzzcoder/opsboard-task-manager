@@ -356,6 +356,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
+                      // --- NEW: Add the timestamp to the UI! ---
+                      const SizedBox(height: 4),
+                      Text(
+                        task.formattedDate,
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
+                      ),
+                      // -----------------------------------------
                       const SizedBox(height: 8),
                       Text(task.description, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14)),
                       const SizedBox(height: 12),
@@ -386,7 +393,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Row(
                               children: [
                                 IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent), onPressed: () => _showEditTaskModal(context, task)),
-                                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), onPressed: () => taskProvider.removeTask(task.id)),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          title: const Text('Delete Incident?', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          content: const Text('Are you sure you want to permanently delete this ticket? This action cannot be undone.'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context), // Just closes the dialog
+                                              child: const Text('CANCEL', style: TextStyle(color: Colors.blueGrey)),
+                                            ),
+                                            TextButton(
+                                              onPressed: () {
+                                                taskProvider.removeTask(task.id); // Actually deletes it
+                                                Navigator.pop(context); // Closes the dialog after deleting
+                                              },
+                                              child: const Text('DELETE', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
                               ],
                             )
                           else
