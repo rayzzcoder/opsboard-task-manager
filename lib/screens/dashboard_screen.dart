@@ -17,19 +17,34 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String _userRole = 'Agent';
   String _userTeam = 'Unassigned';
-
-  // --- NEW: Navigation State ---
   int _selectedIndex = 0;
-  // -----------------------------
+
+  // --- NEW: Scroll Controller to detect when we hit the bottom! ---
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _fetchUserRole();
+
+    // Trigger loadMoreTasks when the user gets near the bottom of the list
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
+        Provider.of<TaskProvider>(context, listen: false).loadMoreTasks();
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<TaskProvider>(context, listen: false).loadUserTasks();
     });
   }
+
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Prevent memory leaks
+    super.dispose();
+  }
+  // ----------------------------------------------------------------
 
   Future<void> _fetchUserRole() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -281,9 +296,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- NEW: Sub-Views for Navigation Tabs ---
   Widget _buildIncidentsTab(TaskProvider taskProvider) {
-    if (taskProvider.isLoading) return const Center(child: CircularProgressIndicator());
+    if (taskProvider.isLoading && taskProvider.tasks.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final displayTasks = taskProvider.filteredTasks;
 
     return Column(
@@ -303,9 +320,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           )
               : ListView.builder(
-            itemCount: displayTasks.length,
+            // --- NEW: Attach the controller and dynamically add +1 to item count for the spinner ---
+            controller: _scrollController,
+            itemCount: displayTasks.length + (taskProvider.isFetchingMore ? 1 : 0),
             padding: const EdgeInsets.only(left: 12, right: 12, bottom: 20),
             itemBuilder: (context, index) {
+
+              // If we reached the end of the list and are fetching more, show a spinner!
+              if (index == displayTasks.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32.0),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              // --------------------------------------------------------------------------------------
+
               final TaskModel task = displayTasks[index];
               return Card(
                 elevation: 3,
@@ -397,20 +426,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Icon(Icons.account_circle_outlined, size: 100, color: Colors.blueGrey.shade300),
           const SizedBox(height: 24),
-          Text('My Profile', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text('My Profile', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Role: $_userRole', style: TextStyle(fontSize: 18, color: Colors.blueGrey)),
-          Text('Team: $_userTeam', style: TextStyle(fontSize: 18, color: Colors.blueGrey)),
+          Text('Role: $_userRole', style: const TextStyle(fontSize: 18, color: Colors.blueGrey)),
+          Text('Team: $_userTeam', style: const TextStyle(fontSize: 18, color: Colors.blueGrey)),
         ],
       ),
     );
   }
-  // ----------------------------------------
 
   @override
   Widget build(BuildContext context) {
-
-    // Determine the active screen based on selected index
     final taskProvider = Provider.of<TaskProvider>(context);
     final List<Widget> pages = [
       _buildIncidentsTab(taskProvider),
@@ -418,7 +444,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _buildProfileTab(),
     ];
 
-    // Dynamic AppBar Titles
     final List<String> pageTitles = [
       'OpsBoard ($_userRole)',
       'Team Directory',
@@ -452,10 +477,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-
-      body: pages[_selectedIndex], // Shows the currently selected tab
-
-      // Only show the Floating Action Button on the first tab, and only if Admin!
+      body: pages[_selectedIndex],
       floatingActionButton: (_selectedIndex == 0 && _userRole == 'Admin')
           ? FloatingActionButton.extended(
         onPressed: () => _showAddTaskModal(context),
@@ -465,8 +487,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         label: const Text('New Incident'),
       )
           : null,
-
-      // --- NEW: Bottom Navigation Bar ---
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
@@ -494,7 +514,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      // ----------------------------------
     );
   }
 }
