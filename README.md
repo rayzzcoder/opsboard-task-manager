@@ -6,6 +6,13 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 12 (Internal Routing & Navigation)
+* **Current State:** Transformed the application from a single-screen view into a multi-page enterprise scaffolding. Implemented a persistent `BottomNavigationBar` with stateful indexed routing. Segmented UI into `Incidents`, `Teams`, and `Profile` tabs. Engineered dynamic AppBar titles and context-aware Floating Action Buttons that respond to the active navigation state.
+* **Completed Files:**
+    * `lib/screens/dashboard_screen.dart`
+    * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 11 (Full CRUD & Edit Engine)
 * **Current State:** Implemented the final missing 'U' in CRUD operations. Added `editTaskDetails` to `TaskProvider` for full document updates. Designed and integrated `_showEditTaskModal` in `DashboardScreen`, allowing Admins to modify incident titles, descriptions, severities, and team assignments dynamically. Restricted edit UI access strictly to Admin roles.
 * **Completed Files:**

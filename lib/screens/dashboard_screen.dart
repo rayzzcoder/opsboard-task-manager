@@ -18,6 +18,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _userRole = 'Agent';
   String _userTeam = 'Unassigned';
 
+  // --- NEW: Navigation State ---
+  int _selectedIndex = 0;
+  // -----------------------------
+
   @override
   void initState() {
     super.initState();
@@ -196,13 +200,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- NEW: Edit Task Modal ---
   void _showEditTaskModal(BuildContext context, TaskModel task) {
-    // Pre-fill the controllers with the existing data
     final titleController = TextEditingController(text: task.title);
     final descController = TextEditingController(text: task.description);
-
-    // Ensure the pre-filled values safely match our dropdown items
     String selectedSeverity = ['Low', 'Medium', 'High', 'Critical'].contains(task.severity) ? task.severity : 'Medium';
     String selectedAssignee = ['Unassigned', 'Alpha Team', 'Bravo Team', 'Cyber Sec', 'Net Ops'].contains(task.assignee) ? task.assignee : 'Unassigned';
 
@@ -260,7 +260,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
                     onPressed: () {
                       if (titleController.text.trim().isEmpty) return;
-                      // Update the specific task in Firestore
                       Provider.of<TaskProvider>(context, listen: false).editTaskDetails(
                         taskId: task.id,
                         title: titleController.text.trim(),
@@ -281,13 +280,154 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     );
   }
-  // ----------------------------
+
+  // --- NEW: Sub-Views for Navigation Tabs ---
+  Widget _buildIncidentsTab(TaskProvider taskProvider) {
+    if (taskProvider.isLoading) return const Center(child: CircularProgressIndicator());
+    final displayTasks = taskProvider.filteredTasks;
+
+    return Column(
+      children: [
+        _buildAnalyticsBanner(taskProvider),
+        _buildFilterRow(taskProvider),
+        Expanded(
+          child: displayTasks.isEmpty
+              ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off, size: 80, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text('No incidents match this filter', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
+              ],
+            ),
+          )
+              : ListView.builder(
+            itemCount: displayTasks.length,
+            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 20),
+            itemBuilder: (context, index) {
+              final TaskModel task = displayTasks[index];
+              return Card(
+                elevation: 3,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(task.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: _getSeverityColor(task.severity), borderRadius: BorderRadius.circular(6)),
+                            child: Text(task.severity.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(task.description, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.assignment_ind_outlined, size: 16, color: Colors.blueGrey.shade400),
+                          const SizedBox(width: 6),
+                          Text(task.assignee, style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          DropdownButton<String>(
+                            value: task.status,
+                            underline: const SizedBox(),
+                            onChanged: (_userRole == 'Admin' || (_userRole == 'Agent' && task.assignee == _userTeam))
+                                ? (newStatus) {
+                              if (newStatus != null) taskProvider.changeTaskStatus(task.id, newStatus);
+                            } : null,
+                            items: ['Open', 'In Progress', 'Resolved'].map((status) {
+                              return DropdownMenuItem(value: status, child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)));
+                            }).toList(),
+                          ),
+                          if (_userRole == 'Admin')
+                            Row(
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent), onPressed: () => _showEditTaskModal(context, task)),
+                                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), onPressed: () => taskProvider.removeTask(task.id)),
+                              ],
+                            )
+                          else
+                            const SizedBox(width: 48),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeamTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.group_work_outlined, size: 100, color: Colors.blueGrey.shade300),
+          const SizedBox(height: 24),
+          const Text('Team Directory', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Module under construction.', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.account_circle_outlined, size: 100, color: Colors.blueGrey.shade300),
+          const SizedBox(height: 24),
+          Text('My Profile', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Role: $_userRole', style: TextStyle(fontSize: 18, color: Colors.blueGrey)),
+          Text('Team: $_userTeam', style: TextStyle(fontSize: 18, color: Colors.blueGrey)),
+        ],
+      ),
+    );
+  }
+  // ----------------------------------------
 
   @override
   Widget build(BuildContext context) {
+
+    // Determine the active screen based on selected index
+    final taskProvider = Provider.of<TaskProvider>(context);
+    final List<Widget> pages = [
+      _buildIncidentsTab(taskProvider),
+      _buildTeamTab(),
+      _buildProfileTab(),
+    ];
+
+    // Dynamic AppBar Titles
+    final List<String> pageTitles = [
+      'OpsBoard ($_userRole)',
+      'Team Directory',
+      'Account Settings',
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('OpsBoard ($_userRole - $_userTeam)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(pageTitles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.blueGrey.shade900,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -297,9 +437,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               return IconButton(
                 icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
                 tooltip: 'Toggle Theme',
-                onPressed: () {
-                  themeProvider.toggleTheme();
-                },
+                onPressed: () => themeProvider.toggleTheme(),
               );
             },
           ),
@@ -314,111 +452,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: Consumer<TaskProvider>(
-        builder: (context, taskProvider, child) {
-          if (taskProvider.isLoading) return const Center(child: CircularProgressIndicator());
-          final displayTasks = taskProvider.filteredTasks;
 
-          return Column(
-            children: [
-              _buildAnalyticsBanner(taskProvider),
-              _buildFilterRow(taskProvider),
-              Expanded(
-                child: displayTasks.isEmpty
-                    ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.search_off, size: 80, color: Colors.grey.shade400),
-                      const SizedBox(height: 16),
-                      Text('No incidents match this filter', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
-                    ],
-                  ),
-                )
-                    : ListView.builder(
-                  itemCount: displayTasks.length,
-                  padding: const EdgeInsets.only(left: 12, right: 12, bottom: 80),
-                  itemBuilder: (context, index) {
-                    final TaskModel task = displayTasks[index];
-                    return Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text(task.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: _getSeverityColor(task.severity), borderRadius: BorderRadius.circular(6)),
-                                  child: Text(task.severity.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(task.description, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14)),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(Icons.assignment_ind_outlined, size: 16, color: Colors.blueGrey.shade400),
-                                const SizedBox(width: 6),
-                                Text(task.assignee, style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13, fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                DropdownButton<String>(
-                                  value: task.status,
-                                  underline: const SizedBox(),
-                                  onChanged: (_userRole == 'Admin' || (_userRole == 'Agent' && task.assignee == _userTeam))
-                                      ? (newStatus) {
-                                    if (newStatus != null) taskProvider.changeTaskStatus(task.id, newStatus);
-                                  } : null,
-                                  items: ['Open', 'In Progress', 'Resolved'].map((status) {
-                                    return DropdownMenuItem(value: status, child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)));
-                                  }).toList(),
-                                ),
+      body: pages[_selectedIndex], // Shows the currently selected tab
 
-                                // --- NEW: Admin gets both Edit and Delete Buttons ---
-                                if (_userRole == 'Admin')
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent),
-                                        onPressed: () => _showEditTaskModal(context, task),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                        onPressed: () => taskProvider.removeTask(task.id),
-                                      ),
-                                    ],
-                                  )
-                                else
-                                  const SizedBox(width: 48), // Spacer for agents so UI doesn't break
-                                // ---------------------------------------------------
-
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: _userRole == 'Admin'
+      // Only show the Floating Action Button on the first tab, and only if Admin!
+      floatingActionButton: (_selectedIndex == 0 && _userRole == 'Admin')
           ? FloatingActionButton.extended(
         onPressed: () => _showAddTaskModal(context),
         backgroundColor: Colors.blueGrey.shade900,
@@ -427,6 +465,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
         label: const Text('New Incident'),
       )
           : null,
+
+      // --- NEW: Bottom Navigation Bar ---
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        selectedItemColor: Colors.blueGrey.shade700,
+        unselectedItemColor: Colors.grey.shade400,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Incidents',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
+            label: 'Teams',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
+      // ----------------------------------
     );
   }
 }
