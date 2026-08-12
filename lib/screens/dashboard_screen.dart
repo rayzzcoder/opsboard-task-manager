@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +7,7 @@ import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/task_model.dart';
 import 'login_screen.dart';
+import 'team_dashboard_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -69,9 +71,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Open': return Colors.blue.shade500;
+      case 'In Progress': return Colors.amber.shade600;
+      case 'Resolved': return Colors.green.shade500;
+      default: return Colors.blueGrey;
+    }
+  }
+
   Widget _buildAnalyticsBanner(TaskProvider taskProvider) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.blueGrey.shade900,
         boxShadow: [
@@ -81,7 +92,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _statColumn('Active', taskProvider.totalActiveIncidents, Colors.lightBlueAccent),
+          _statColumn('Open', taskProvider.openIncidents, Colors.lightBlueAccent),
+          _statColumn('In Progress', taskProvider.inProgressIncidents, Colors.amberAccent),
           _statColumn('Critical', taskProvider.criticalAlerts, Colors.redAccent),
           _statColumn('Resolved', taskProvider.resolvedIncidents, Colors.greenAccent),
         ],
@@ -92,9 +104,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _statColumn(String label, int count, Color color) {
     return Column(
       children: [
-        Text(count.toString(), style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
+        Text(count.toString(), style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: color)),
         const SizedBox(height: 4),
-        Text(label.toUpperCase(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade400)),
+        Text(label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade400)),
       ],
     );
   }
@@ -315,7 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showNotesModal(BuildContext context, TaskModel task, TaskProvider taskProvider) {
+  void _showNotesModal(BuildContext context, TaskModel initialTask, TaskProvider taskProvider) {
     final commentController = TextEditingController();
     final currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? 'Unknown User';
     final displayName = _userRole == 'Admin' ? 'Admin Command' : _userTeam;
@@ -348,7 +360,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Activity Log: ${task.title}',
+                          'Activity Log: ${initialTask.title}',
                           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -362,83 +374,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
 
                 Expanded(
-                  child: task.comments.isEmpty
-                      ? Center(
-                    child: Text(
-                      'No notes yet. Be the first to add an update!',
-                      style: TextStyle(color: Colors.grey.shade500),
-                    ),
-                  )
-                      : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: task.comments.length,
-                    itemBuilder: (context, index) {
-                      // --- BULLETPROOF NULL SAFETY CHECK ---
-                      final rawComment = task.comments[index];
-                      if (rawComment == null || rawComment is! Map) {
-                        return const SizedBox.shrink(); // Skips corrupted/deleted Firebase data safely
+                  child: StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance.collection('tasks').doc(initialTask.id).snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
                       }
 
-                      final comment = rawComment as Map<String, dynamic>;
-                      final authorEmail = comment['authorEmail']?.toString() ?? 'Unknown';
-                      final isMe = authorEmail == currentUserEmail;
-                      final displayAuthor = comment['authorName']?.toString() ?? authorEmail.split('@')[0];
+                      final taskData = snapshot.data?.data() as Map<String, dynamic>?;
+                      if (taskData == null) return const SizedBox.shrink();
 
-                      // Safe Timestamp Parsing
-                      String prettyTime = '';
-                      if (comment['timestamp'] != null) {
-                        try {
-                          final stamp = DateTime.parse(comment['timestamp'].toString());
-                          prettyTime = "${stamp.month}/${stamp.day} • ${stamp.hour}:${stamp.minute.toString().padLeft(2, '0')}";
-                        } catch (e) {
-                          prettyTime = 'Unknown Time';
-                        }
-                      }
+                      final currentTask = TaskModel.fromMap(taskData, snapshot.data!.id);
+                      final commentsList = currentTask.comments;
 
-                      final textContent = comment['text']?.toString() ?? '[Deleted Message]';
-                      // ------------------------------------
-
-                      return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          width: MediaQuery.of(context).size.width * 0.75,
-                          decoration: BoxDecoration(
-                            color: isMe ? Colors.blue.shade100 : Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12),
+                      if (commentsList.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No notes yet. Be the first to add an update!',
+                            style: TextStyle(color: Colors.grey.shade500),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: commentsList.length,
+                        itemBuilder: (context, index) {
+                          final rawComment = commentsList[index];
+                          if (rawComment == null || rawComment is! Map) {
+                            return const SizedBox.shrink();
+                          }
+
+                          final comment = rawComment as Map<String, dynamic>;
+                          final authorEmail = comment['authorEmail']?.toString() ?? 'Unknown';
+                          final isMe = authorEmail == currentUserEmail;
+                          final displayAuthor = comment['authorName']?.toString() ?? authorEmail.split('@')[0];
+
+                          String prettyTime = '';
+                          if (comment['timestamp'] != null) {
+                            try {
+                              final stamp = DateTime.parse(comment['timestamp'].toString());
+                              prettyTime = "${stamp.month}/${stamp.day} • ${stamp.hour}:${stamp.minute.toString().padLeft(2, '0')}";
+                            } catch (e) {
+                              prettyTime = 'Unknown Time';
+                            }
+                          }
+
+                          final textContent = comment['text']?.toString() ?? '[Deleted Message]';
+
+                          return Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              width: MediaQuery.of(context).size.width * 0.75,
+                              decoration: BoxDecoration(
+                                color: isMe ? Colors.blue.shade100 : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      isMe ? 'You ($displayAuthor)' : displayAuthor,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: isMe ? Colors.blue.shade800 : Colors.blueGrey.shade800,
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          isMe ? 'You ($displayAuthor)' : displayAuthor,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: isMe ? Colors.blue.shade800 : Colors.blueGrey.shade800,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      Text(
+                                        prettyTime,
+                                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 6),
                                   Text(
-                                    prettyTime,
-                                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                    textContent,
+                                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                textContent,
-                                style: const TextStyle(fontSize: 14, color: Colors.black87),
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -477,13 +503,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onPressed: () {
                             if (commentController.text.trim().isNotEmpty) {
                               taskProvider.addComment(
-                                task.id,
+                                initialTask.id,
                                 commentController.text.trim(),
                                 currentUserEmail,
                                 displayName,
                               );
                               commentController.clear();
-                              Navigator.pop(context);
                             }
                           },
                         ),
@@ -607,7 +632,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       size: 16,
                                       color: hasUnread ? Colors.redAccent : Colors.blueGrey.shade300
                                   ),
-                                  // --- UPDATED: Replaced the total count with a clean "NEW" tag ---
                                   if (hasUnread) ...[
                                     const SizedBox(width: 4),
                                     Container(
@@ -635,12 +659,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             DropdownButton<String>(
                               value: task.status,
                               underline: const SizedBox(),
+                              icon: Icon(Icons.arrow_drop_down, color: _getStatusColor(task.status)),
+                              style: TextStyle(
+                                color: _getStatusColor(task.status),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                               onChanged: (_userRole == 'Admin' || (_userRole == 'Agent' && task.assignee == _userTeam))
                                   ? (newStatus) {
                                 if (newStatus != null) taskProvider.changeTaskStatus(task.id, newStatus);
                               } : null,
                               items: ['Open', 'In Progress', 'Resolved'].map((status) {
-                                return DropdownMenuItem(value: status, child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)));
+                                return DropdownMenuItem(
+                                    value: status,
+                                    child: Text(
+                                        status,
+                                        style: TextStyle(color: _getStatusColor(status), fontSize: 13, fontWeight: FontWeight.bold)
+                                    )
+                                );
                               }).toList(),
                             ),
                             if (_userRole == 'Admin')
@@ -720,12 +756,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             subtitle: const Text('Operational Unit'),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${team['name']} dashboard coming soon!'),
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 2),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TeamDashboardScreen(
+                    teamName: team['name'] as String,
+                    teamColor: team['color'] as Color,
+                    teamIcon: team['icon'] as IconData,
+                  ),
                 ),
               );
             },
@@ -831,70 +869,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Account Settings',
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(pageTitles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.blueGrey.shade900,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, child) {
-              return IconButton(
-                icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-                tooltip: 'Toggle Theme',
-                onPressed: () => themeProvider.toggleTheme(),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
-            onPressed: () async {
-              final currentContext = context;
-              await FirebaseAuth.instance.signOut();
-              if (!currentContext.mounted) return;
-              Navigator.pushReplacement(currentContext, MaterialPageRoute(builder: (context) => const LoginScreen()));
-            },
-          ),
-        ],
-      ),
-      body: pages[_selectedIndex],
-      floatingActionButton: (_selectedIndex == 0 && _userRole == 'Admin')
-          ? FloatingActionButton.extended(
-        onPressed: () => _showAddTaskModal(context),
-        backgroundColor: Colors.blueGrey.shade900,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('New Incident'),
-      )
-          : null,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        if (_selectedIndex > 0) {
           setState(() {
-            _selectedIndex = index;
+            _selectedIndex--;
           });
-        },
-        selectedItemColor: Colors.blueGrey.shade700,
-        unselectedItemColor: Colors.grey.shade400,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'Incidents',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
-            label: 'Teams',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+        } else {
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: const Text('Exit OpsBoard?'),
+              content: const Text('Are you sure you want to close the application?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('CANCEL', style: TextStyle(color: Colors.blueGrey)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('EXIT', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+          if (shouldExit ?? false) {
+            SystemNavigator.pop();
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(pageTitles[_selectedIndex], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          backgroundColor: Colors.blueGrey.shade900,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return IconButton(
+                  icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+                  tooltip: 'Toggle Theme',
+                  onPressed: () => themeProvider.toggleTheme(),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Sign Out',
+              onPressed: () async {
+                final currentContext = context;
+                await FirebaseAuth.instance.signOut();
+                if (!currentContext.mounted) return;
+                Navigator.pushReplacement(currentContext, MaterialPageRoute(builder: (context) => const LoginScreen()));
+              },
+            ),
+          ],
+        ),
+        body: pages[_selectedIndex],
+        floatingActionButton: (_selectedIndex == 0 && _userRole == 'Admin')
+            ? FloatingActionButton.extended(
+          onPressed: () => _showAddTaskModal(context),
+          backgroundColor: Colors.blueGrey.shade900,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add),
+          label: const Text('New Incident'),
+        )
+            : null,
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          selectedItemColor: Colors.blueGrey.shade700,
+          unselectedItemColor: Colors.grey.shade400,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Incidents',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline),
+              activeIcon: Icon(Icons.people),
+              label: 'Teams',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }

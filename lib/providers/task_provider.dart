@@ -50,9 +50,15 @@ class TaskProvider extends ChangeNotifier {
     return tempTasks;
   }
 
+  // --- UPDATED: Added specific getters for the 4-column Analytics Banner ---
+  int get openIncidents => _tasks.where((task) => task.status == 'Open').length;
+  int get inProgressIncidents => _tasks.where((task) => task.status == 'In Progress').length;
+
+  // Kept original getters for safety
   int get totalActiveIncidents => _tasks.where((task) => task.status != 'Resolved').length;
   int get criticalAlerts => _tasks.where((task) => task.severity.toLowerCase() == 'critical' && task.status != 'Resolved').length;
   int get resolvedIncidents => _tasks.where((task) => task.status == 'Resolved').length;
+  // --------------------------------------------------------------------------
 
   void loadUserTasks() {
     _currentFilter = 'All';
@@ -139,7 +145,6 @@ class TaskProvider extends ChangeNotifier {
     await _firestoreService.deleteTask(taskId);
   }
 
-  // --- UPDATED: Resets the "readBy" list so others get notified! ---
   Future<void> addComment(String taskId, String commentText, String authorEmail, String authorName) async {
     final newComment = {
       'text': commentText,
@@ -150,12 +155,10 @@ class TaskProvider extends ChangeNotifier {
 
     await _firestoreService.updateTask(taskId, {
       'comments': FieldValue.arrayUnion([newComment]),
-      // Overwrite the readBy array so ONLY the author has read this new message!
       'readBy': [authorEmail],
     });
   }
 
-  // --- NEW: Marks the incident as read for this specific user ---
   Future<void> markAsRead(String taskId, String userEmail) async {
     await _firestoreService.updateTask(taskId, {
       'readBy': FieldValue.arrayUnion([userEmail])
