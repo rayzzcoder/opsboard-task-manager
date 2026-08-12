@@ -1,4 +1,4 @@
-import 'dart:async'; // --- NEW: Required for managing Stream connections ---
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/task_model.dart';
 import '../services/firestore_service.dart';
@@ -10,29 +10,53 @@ class TaskProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _currentFilter = 'All';
 
-  // --- NEW: Pagination Variables ---
-  int _documentLimit = 10; // Start by loading 10 tickets
+  // --- NEW: Search Engine State ---
+  String _searchQuery = '';
+  // --------------------------------
+
+  int _documentLimit = 10;
   StreamSubscription<List<TaskModel>>? _taskSubscription;
   bool _isFetchingMore = false;
-  // --------------------------------
 
   String get currentFilter => _currentFilter;
   List<TaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;
-  bool get isFetchingMore => _isFetchingMore; // Expose this so UI can show a loader at the bottom
+  bool get isFetchingMore => _isFetchingMore;
 
   void setFilter(String filter) {
     _currentFilter = filter;
     notifyListeners();
   }
 
-  List<TaskModel> get filteredTasks {
-    if (_currentFilter == 'All') return _tasks;
-    if (_currentFilter == 'Critical') {
-      return _tasks.where((t) => t.severity.toLowerCase() == 'critical').toList();
-    }
-    return _tasks.where((t) => t.status == _currentFilter).toList();
+  // --- NEW: Method to update search query ---
+  void setSearchQuery(String query) {
+    _searchQuery = query.toLowerCase();
+    notifyListeners();
   }
+  // ------------------------------------------
+
+  // --- UPDATED: Applies both Chip Filters AND Search Queries simultaneously ---
+  List<TaskModel> get filteredTasks {
+    List<TaskModel> tempTasks = _tasks;
+
+    // 1. Apply the Chip Filter (Open, Critical, etc.)
+    if (_currentFilter == 'Critical') {
+      tempTasks = tempTasks.where((t) => t.severity.toLowerCase() == 'critical').toList();
+    } else if (_currentFilter != 'All') {
+      tempTasks = tempTasks.where((t) => t.status == _currentFilter).toList();
+    }
+
+    // 2. Apply the Search Bar Text Filter
+    if (_searchQuery.isNotEmpty) {
+      tempTasks = tempTasks.where((t) =>
+      t.title.toLowerCase().contains(_searchQuery) ||
+          t.description.toLowerCase().contains(_searchQuery)
+      ).toList();
+    }
+
+    return tempTasks;
+  }
+  // -----------------------------------------------------------------------------
 
   int get totalActiveIncidents => _tasks.where((task) => task.status != 'Resolved').length;
   int get criticalAlerts => _tasks.where((task) => task.severity.toLowerCase() == 'critical' && task.status != 'Resolved').length;
@@ -40,22 +64,21 @@ class TaskProvider extends ChangeNotifier {
 
   void loadUserTasks() {
     _currentFilter = 'All';
-    _documentLimit = 10; // Reset limit when first logging in
+    _searchQuery = ''; // Reset search on login
+    _documentLimit = 10;
     _isLoading = true;
     notifyListeners();
 
     _listenToTasks();
   }
 
-  // --- NEW: The Engine that handles the dynamic stream ---
   void _listenToTasks() {
-    _taskSubscription?.cancel(); // Close the old 10-ticket connection
+    _taskSubscription?.cancel();
 
-    // Open a new connection with the updated limit
     _taskSubscription = _firestoreService.getTasks(_documentLimit).listen((taskList) {
       _tasks = taskList;
       _isLoading = false;
-      _isFetchingMore = false; // Turn off the bottom loader
+      _isFetchingMore = false;
       notifyListeners();
     }, onError: (error) {
       _isLoading = false;
@@ -64,23 +87,21 @@ class TaskProvider extends ChangeNotifier {
     });
   }
 
-  // --- NEW: Triggered by the UI when the user scrolls to the bottom ---
   void loadMoreTasks() {
-    if (_isFetchingMore) return; // Prevent spamming the database
+    if (_isFetchingMore) return;
 
-    // If the database gave us fewer tickets than our limit, we reached the end!
     if (_tasks.length < _documentLimit) return;
 
     _isFetchingMore = true;
-    _documentLimit += 10; // Increase the fetch limit
+    _documentLimit += 10;
     notifyListeners();
 
-    _listenToTasks(); // Restart stream with the new limit
+    _listenToTasks();
   }
 
   @override
   void dispose() {
-    _taskSubscription?.cancel(); // Always clean up connections to prevent memory leaks
+    _taskSubscription?.cancel();
     super.dispose();
   }
 

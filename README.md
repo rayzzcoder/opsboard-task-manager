@@ -6,6 +6,14 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 16 (Real-Time Search Engine)
+* **Current State:** Engineered a real-time local search engine inside `TaskProvider`. Added a responsive Search Bar to the dashboard UI that instantly filters the active task stream by comparing user input against incident titles and descriptions. This approach eliminates redundant Firestore reads while providing zero-latency search results.
+* **Completed Files:**
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 15 (Team Directory, Profile Engine & UX Polish)
 * **Current State:** Fully populated the `Teams` and `Profile` tabs within the stateful bottom navigation scaffold. Engineered an interactive Team Directory displaying operational units and responsive snackbars. Built a dynamic User Profile card displaying live Firebase Auth credentials, role-specific badge styling, and custom clearance logic ("Global Command" for Admins). Fixed async context guardrail warnings across authentication flows.
 * **Completed Files:**

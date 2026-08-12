@@ -99,6 +99,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // --- NEW: Real-Time Search Bar Widget ---
+  Widget _buildSearchBar(TaskProvider taskProvider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: TextField(
+        onChanged: (value) => taskProvider.setSearchQuery(value),
+        decoration: InputDecoration(
+          hintText: 'Search incident titles or descriptions...',
+          prefixIcon: const Icon(Icons.search, color: Colors.blueGrey),
+          filled: true,
+          fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+  // ----------------------------------------
+
   Widget _buildFilterRow(TaskProvider taskProvider) {
     final filters = ['All', 'Critical', 'Open', 'In Progress', 'Resolved'];
     return SingleChildScrollView(
@@ -303,6 +327,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         _buildAnalyticsBanner(taskProvider),
+        // --- NEW: Added the Search Bar here! ---
+        _buildSearchBar(taskProvider),
+        // ---------------------------------------
         _buildFilterRow(taskProvider),
         Expanded(
           child: displayTasks.isEmpty
