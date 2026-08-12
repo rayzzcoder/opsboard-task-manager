@@ -6,6 +6,13 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 15 (Team Directory, Profile Engine & UX Polish)
+* **Current State:** Fully populated the `Teams` and `Profile` tabs within the stateful bottom navigation scaffold. Engineered an interactive Team Directory displaying operational units and responsive snackbars. Built a dynamic User Profile card displaying live Firebase Auth credentials, role-specific badge styling, and custom clearance logic ("Global Command" for Admins). Fixed async context guardrail warnings across authentication flows.
+* **Completed Files:**
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 14 (Chronological Ordering & Data Safeguards)
 * **Current State:** Upgraded the database schema and UI to support precise chronological incident tracking. Integrated a `createdAt` timestamp in `TaskModel` with 12-hour AM/PM formatting. Updated `FirestoreService` to enforce `.orderBy()` sorting, ensuring the newest incidents always render at the top of the global board. Implemented a robust `AlertDialog` guardrail in the UI to prevent accidental deletions by Admins.
 * **Completed Files:**

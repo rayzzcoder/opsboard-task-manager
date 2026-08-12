@@ -19,7 +19,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _userTeam = 'Unassigned';
   int _selectedIndex = 0;
 
-  // --- NEW: Scroll Controller to detect when we hit the bottom! ---
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -27,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _fetchUserRole();
 
-    // Trigger loadMoreTasks when the user gets near the bottom of the list
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
         Provider.of<TaskProvider>(context, listen: false).loadMoreTasks();
@@ -41,10 +39,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose(); // Prevent memory leaks
+    _scrollController.dispose();
     super.dispose();
   }
-  // ----------------------------------------------------------------
 
   Future<void> _fetchUserRole() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -320,20 +317,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           )
               : ListView.builder(
-            // --- NEW: Attach the controller and dynamically add +1 to item count for the spinner ---
             controller: _scrollController,
             itemCount: displayTasks.length + (taskProvider.isFetchingMore ? 1 : 0),
             padding: const EdgeInsets.only(left: 12, right: 12, bottom: 20),
             itemBuilder: (context, index) {
-
-              // If we reached the end of the list and are fetching more, show a spinner!
               if (index == displayTasks.length) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 32.0),
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
-              // --------------------------------------------------------------------------------------
 
               final TaskModel task = displayTasks[index];
               return Card(
@@ -356,13 +349,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
-                      // --- NEW: Add the timestamp to the UI! ---
                       const SizedBox(height: 4),
                       Text(
                         task.formattedDate,
                         style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
                       ),
-                      // -----------------------------------------
                       const SizedBox(height: 8),
                       Text(task.description, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14)),
                       const SizedBox(height: 12),
@@ -405,13 +396,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           content: const Text('Are you sure you want to permanently delete this ticket? This action cannot be undone.'),
                                           actions: [
                                             TextButton(
-                                              onPressed: () => Navigator.pop(context), // Just closes the dialog
+                                              onPressed: () => Navigator.pop(context),
                                               child: const Text('CANCEL', style: TextStyle(color: Colors.blueGrey)),
                                             ),
                                             TextButton(
                                               onPressed: () {
-                                                taskProvider.removeTask(task.id); // Actually deletes it
-                                                Navigator.pop(context); // Closes the dialog after deleting
+                                                taskProvider.removeTask(task.id);
+                                                Navigator.pop(context);
                                               },
                                               child: const Text('DELETE', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                                             ),
@@ -439,31 +430,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTeamTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.group_work_outlined, size: 100, color: Colors.blueGrey.shade300),
-          const SizedBox(height: 24),
-          const Text('Team Directory', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Module under construction.', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
-        ],
-      ),
+    final teams = [
+      {'name': 'Alpha Team', 'icon': Icons.security, 'color': Colors.blue},
+      {'name': 'Bravo Team', 'icon': Icons.build, 'color': Colors.orange},
+      {'name': 'Cyber Sec', 'icon': Icons.lock, 'color': Colors.red},
+      {'name': 'Net Ops', 'icon': Icons.router, 'color': Colors.green},
+    ];
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: teams.length,
+      itemBuilder: (context, index) {
+        final team = teams[index];
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            leading: CircleAvatar(
+              backgroundColor: (team['color'] as Color).withValues(alpha: 0.2),
+              child: Icon(team['icon'] as IconData, color: team['color'] as Color),
+            ),
+            title: Text(team['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            subtitle: const Text('Operational Unit'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${team['name']} dashboard coming soon!'),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
   Widget _buildProfileTab() {
-    return Center(
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email ?? 'Unknown Email';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.account_circle_outlined, size: 100, color: Colors.blueGrey.shade300),
-          const SizedBox(height: 24),
-          const Text('My Profile', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.blueGrey.shade700,
+            child: const Icon(Icons.person, size: 50, color: Colors.white),
+          ),
+          const SizedBox(height: 20),
+          Text(email, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Role: $_userRole', style: const TextStyle(fontSize: 18, color: Colors.blueGrey)),
-          Text('Team: $_userTeam', style: const TextStyle(fontSize: 18, color: Colors.blueGrey)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _userRole == 'Admin' ? Colors.red.shade100 : Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _userRole.toUpperCase(),
+              style: TextStyle(
+                color: _userRole == 'Admin' ? Colors.red.shade800 : Colors.blue.shade800,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.group, color: Colors.blueGrey),
+            title: Text(_userRole == 'Admin' ? 'Clearance Level' : 'Assigned Team'),
+            trailing: Text(
+              _userRole == 'Admin' ? 'Global Command' : _userTeam,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: _userRole == 'Admin' ? Colors.redAccent : Colors.black87,
+              ),
+            ),
+          ),
+
+          const Divider(),
+          const ListTile(
+            leading: Icon(Icons.security, color: Colors.blueGrey),
+            title: Text('Account Status'),
+            trailing: Text('Active', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          const Divider(),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.logout),
+              label: const Text('SIGN OUT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                final currentContext = context;
+                await FirebaseAuth.instance.signOut();
+                if (!currentContext.mounted) return;
+                Navigator.pushReplacement(currentContext, MaterialPageRoute(builder: (context) => const LoginScreen()));
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -504,9 +587,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.logout),
             tooltip: 'Sign Out',
             onPressed: () async {
+              final currentContext = context;
               await FirebaseAuth.instance.signOut();
-              if (!context.mounted) return;
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+              if (!currentContext.mounted) return;
+              Navigator.pushReplacement(currentContext, MaterialPageRoute(builder: (context) => const LoginScreen()));
             },
           ),
         ],
