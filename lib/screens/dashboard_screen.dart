@@ -99,7 +99,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- NEW: Real-Time Search Bar Widget ---
   Widget _buildSearchBar(TaskProvider taskProvider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -121,7 +120,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-  // ----------------------------------------
 
   Widget _buildFilterRow(TaskProvider taskProvider) {
     final filters = ['All', 'Critical', 'Open', 'In Progress', 'Resolved'];
@@ -317,6 +315,190 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showNotesModal(BuildContext context, TaskModel task, TaskProvider taskProvider) {
+    final commentController = TextEditingController();
+    final currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? 'Unknown User';
+    final displayName = _userRole == 'Admin' ? 'Admin Command' : _userTeam;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.shade900,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.forum, color: Colors.white),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Activity Log: ${task.title}',
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70),
+                        onPressed: () => Navigator.pop(context),
+                      )
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: task.comments.isEmpty
+                      ? Center(
+                    child: Text(
+                      'No notes yet. Be the first to add an update!',
+                      style: TextStyle(color: Colors.grey.shade500),
+                    ),
+                  )
+                      : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: task.comments.length,
+                    itemBuilder: (context, index) {
+                      // --- BULLETPROOF NULL SAFETY CHECK ---
+                      final rawComment = task.comments[index];
+                      if (rawComment == null || rawComment is! Map) {
+                        return const SizedBox.shrink(); // Skips corrupted/deleted Firebase data safely
+                      }
+
+                      final comment = rawComment as Map<String, dynamic>;
+                      final authorEmail = comment['authorEmail']?.toString() ?? 'Unknown';
+                      final isMe = authorEmail == currentUserEmail;
+                      final displayAuthor = comment['authorName']?.toString() ?? authorEmail.split('@')[0];
+
+                      // Safe Timestamp Parsing
+                      String prettyTime = '';
+                      if (comment['timestamp'] != null) {
+                        try {
+                          final stamp = DateTime.parse(comment['timestamp'].toString());
+                          prettyTime = "${stamp.month}/${stamp.day} • ${stamp.hour}:${stamp.minute.toString().padLeft(2, '0')}";
+                        } catch (e) {
+                          prettyTime = 'Unknown Time';
+                        }
+                      }
+
+                      final textContent = comment['text']?.toString() ?? '[Deleted Message]';
+                      // ------------------------------------
+
+                      return Align(
+                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          width: MediaQuery.of(context).size.width * 0.75,
+                          decoration: BoxDecoration(
+                            color: isMe ? Colors.blue.shade100 : Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      isMe ? 'You ($displayAuthor)' : displayAuthor,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: isMe ? Colors.blue.shade800 : Colors.blueGrey.shade800,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    prettyTime,
+                                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                textContent,
+                                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, -2))
+                      ]
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: commentController,
+                          decoration: InputDecoration(
+                            hintText: 'Add an update or note...',
+                            filled: true,
+                            fillColor: Theme.of(context).scaffoldBackgroundColor,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        backgroundColor: Colors.blueAccent,
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                          onPressed: () {
+                            if (commentController.text.trim().isNotEmpty) {
+                              taskProvider.addComment(
+                                task.id,
+                                commentController.text.trim(),
+                                currentUserEmail,
+                                displayName,
+                              );
+                              commentController.clear();
+                              Navigator.pop(context);
+                            }
+                          },
+                        ),
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildIncidentsTab(TaskProvider taskProvider) {
     if (taskProvider.isLoading && taskProvider.tasks.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -327,9 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         _buildAnalyticsBanner(taskProvider),
-        // --- NEW: Added the Search Bar here! ---
         _buildSearchBar(taskProvider),
-        // ---------------------------------------
         _buildFilterRow(taskProvider),
         Expanded(
           child: displayTasks.isEmpty
@@ -356,96 +536,153 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
 
               final TaskModel task = displayTasks[index];
+              final currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+
+              final canViewChat = _userRole == 'Admin' || task.assignee == _userTeam;
+              final hasUnread = task.comments.isNotEmpty && !task.readBy.contains(currentUserEmail);
+
               return Card(
                 elevation: 3,
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(child: Text(task.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: _getSeverityColor(task.severity), borderRadius: BorderRadius.circular(6)),
-                            child: Text(task.severity.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        task.formattedDate,
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(task.description, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.assignment_ind_outlined, size: 16, color: Colors.blueGrey.shade400),
-                          const SizedBox(width: 6),
-                          Text(task.assignee, style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          DropdownButton<String>(
-                            value: task.status,
-                            underline: const SizedBox(),
-                            onChanged: (_userRole == 'Admin' || (_userRole == 'Agent' && task.assignee == _userTeam))
-                                ? (newStatus) {
-                              if (newStatus != null) taskProvider.changeTaskStatus(task.id, newStatus);
-                            } : null,
-                            items: ['Open', 'In Progress', 'Resolved'].map((status) {
-                              return DropdownMenuItem(value: status, child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)));
-                            }).toList(),
-                          ),
-                          if (_userRole == 'Admin')
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    if (canViewChat) {
+                      if (hasUnread) {
+                        taskProvider.markAsRead(task.id, currentUserEmail);
+                      }
+                      _showNotesModal(context, task, taskProvider);
+                    } else {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Access Denied: Only Admins and the assigned team can view this log.'),
+                          backgroundColor: Colors.redAccent,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text(task.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: _getSeverityColor(task.severity), borderRadius: BorderRadius.circular(6)),
+                              child: Text(task.severity.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          task.formattedDate,
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(task.description, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7), fontSize: 14)),
+                        const SizedBox(height: 12),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
                             Row(
                               children: [
-                                IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent), onPressed: () => _showEditTaskModal(context, task)),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return AlertDialog(
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          title: const Text('Delete Incident?', style: TextStyle(fontWeight: FontWeight.bold)),
-                                          content: const Text('Are you sure you want to permanently delete this ticket? This action cannot be undone.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context),
-                                              child: const Text('CANCEL', style: TextStyle(color: Colors.blueGrey)),
-                                            ),
-                                            TextButton(
-                                              onPressed: () {
-                                                taskProvider.removeTask(task.id);
-                                                Navigator.pop(context);
-                                              },
-                                              child: const Text('DELETE', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
+                                Icon(Icons.assignment_ind_outlined, size: 16, color: Colors.blueGrey.shade400),
+                                const SizedBox(width: 6),
+                                Text(task.assignee, style: TextStyle(color: Colors.blueGrey.shade400, fontSize: 13, fontWeight: FontWeight.w600)),
                               ],
-                            )
-                          else
-                            const SizedBox(width: 48),
-                        ],
-                      ),
-                    ],
+                            ),
+                            if (canViewChat)
+                              Row(
+                                children: [
+                                  Icon(
+                                      Icons.forum_outlined,
+                                      size: 16,
+                                      color: hasUnread ? Colors.redAccent : Colors.blueGrey.shade300
+                                  ),
+                                  // --- UPDATED: Replaced the total count with a clean "NEW" tag ---
+                                  if (hasUnread) ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.redAccent,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        'NEW',
+                                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ]
+                                ],
+                              )
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            DropdownButton<String>(
+                              value: task.status,
+                              underline: const SizedBox(),
+                              onChanged: (_userRole == 'Admin' || (_userRole == 'Agent' && task.assignee == _userTeam))
+                                  ? (newStatus) {
+                                if (newStatus != null) taskProvider.changeTaskStatus(task.id, newStatus);
+                              } : null,
+                              items: ['Open', 'In Progress', 'Resolved'].map((status) {
+                                return DropdownMenuItem(value: status, child: Text(status, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)));
+                              }).toList(),
+                            ),
+                            if (_userRole == 'Admin')
+                              Row(
+                                children: [
+                                  IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent), onPressed: () => _showEditTaskModal(context, task)),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            title: const Text('Delete Incident?', style: TextStyle(fontWeight: FontWeight.bold)),
+                                            content: const Text('Are you sure you want to permanently delete this ticket? This action cannot be undone.'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: const Text('CANCEL', style: TextStyle(color: Colors.blueGrey)),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  taskProvider.removeTask(task.id);
+                                                  Navigator.pop(context);
+                                                },
+                                                child: const Text('DELETE', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
+                              )
+                            else
+                              const SizedBox(width: 48),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

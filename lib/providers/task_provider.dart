@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/task_model.dart';
 import '../services/firestore_service.dart';
 
@@ -9,10 +10,7 @@ class TaskProvider extends ChangeNotifier {
   List<TaskModel> _tasks = [];
   bool _isLoading = false;
   String _currentFilter = 'All';
-
-  // --- NEW: Search Engine State ---
   String _searchQuery = '';
-  // --------------------------------
 
   int _documentLimit = 10;
   StreamSubscription<List<TaskModel>>? _taskSubscription;
@@ -28,25 +26,20 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- NEW: Method to update search query ---
   void setSearchQuery(String query) {
     _searchQuery = query.toLowerCase();
     notifyListeners();
   }
-  // ------------------------------------------
 
-  // --- UPDATED: Applies both Chip Filters AND Search Queries simultaneously ---
   List<TaskModel> get filteredTasks {
     List<TaskModel> tempTasks = _tasks;
 
-    // 1. Apply the Chip Filter (Open, Critical, etc.)
     if (_currentFilter == 'Critical') {
       tempTasks = tempTasks.where((t) => t.severity.toLowerCase() == 'critical').toList();
     } else if (_currentFilter != 'All') {
       tempTasks = tempTasks.where((t) => t.status == _currentFilter).toList();
     }
 
-    // 2. Apply the Search Bar Text Filter
     if (_searchQuery.isNotEmpty) {
       tempTasks = tempTasks.where((t) =>
       t.title.toLowerCase().contains(_searchQuery) ||
@@ -56,7 +49,6 @@ class TaskProvider extends ChangeNotifier {
 
     return tempTasks;
   }
-  // -----------------------------------------------------------------------------
 
   int get totalActiveIncidents => _tasks.where((task) => task.status != 'Resolved').length;
   int get criticalAlerts => _tasks.where((task) => task.severity.toLowerCase() == 'critical' && task.status != 'Resolved').length;
@@ -64,7 +56,7 @@ class TaskProvider extends ChangeNotifier {
 
   void loadUserTasks() {
     _currentFilter = 'All';
-    _searchQuery = ''; // Reset search on login
+    _searchQuery = '';
     _documentLimit = 10;
     _isLoading = true;
     notifyListeners();
@@ -89,7 +81,6 @@ class TaskProvider extends ChangeNotifier {
 
   void loadMoreTasks() {
     if (_isFetchingMore) return;
-
     if (_tasks.length < _documentLimit) return;
 
     _isFetchingMore = true;
@@ -146,5 +137,28 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> removeTask(String taskId) async {
     await _firestoreService.deleteTask(taskId);
+  }
+
+  // --- UPDATED: Resets the "readBy" list so others get notified! ---
+  Future<void> addComment(String taskId, String commentText, String authorEmail, String authorName) async {
+    final newComment = {
+      'text': commentText,
+      'authorEmail': authorEmail,
+      'authorName': authorName,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    await _firestoreService.updateTask(taskId, {
+      'comments': FieldValue.arrayUnion([newComment]),
+      // Overwrite the readBy array so ONLY the author has read this new message!
+      'readBy': [authorEmail],
+    });
+  }
+
+  // --- NEW: Marks the incident as read for this specific user ---
+  Future<void> markAsRead(String taskId, String userEmail) async {
+    await _firestoreService.updateTask(taskId, {
+      'readBy': FieldValue.arrayUnion([userEmail])
+    });
   }
 }

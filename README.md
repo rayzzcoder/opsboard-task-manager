@@ -6,6 +6,15 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 17 (Collaborative Activity Logs & Smart Notifications)
+* **Current State:** Engineered an in-app Activity Log allowing authenticated users to post real-time updates to individual incidents. Implemented strict Role-Based Access Control (RBAC) preventing unauthorized teams from viewing restricted incident chat logs. Designed a lightweight 'Read Receipt' engine using Firestore arrays to dynamically render 'NEW' notification badges on incident cards, which instantly dismiss upon user engagement. Added robust null-safety handling to the `ListView.builder` to gracefully manage corrupted or manually deleted database arrays.
+* **Completed Files:**
+  * `lib/models/task_model.dart`
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 16 (Real-Time Search Engine)
 * **Current State:** Engineered a real-time local search engine inside `TaskProvider`. Added a responsive Search Bar to the dashboard UI that instantly filters the active task stream by comparing user input against incident titles and descriptions. This approach eliminates redundant Firestore reads while providing zero-latency search results.
 * **Completed Files:**

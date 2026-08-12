@@ -9,6 +9,10 @@ class TaskModel {
   final DateTime? createdAt;
   final String userId;
   final String assignee;
+  final List<dynamic> comments;
+
+  // --- NEW: Read Receipts ---
+  final List<dynamic> readBy;
 
   TaskModel({
     required this.id,
@@ -19,6 +23,8 @@ class TaskModel {
     this.createdAt,
     required this.userId,
     required this.assignee,
+    this.comments = const [],
+    this.readBy = const [], // Default to empty
   });
 
   factory TaskModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -31,6 +37,8 @@ class TaskModel {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
       userId: map['userId'] ?? '',
       assignee: map['assignee'] ?? 'Unassigned',
+      comments: map['comments'] ?? [],
+      readBy: map['readBy'] ?? [], // Safely pull from DB
     );
   }
 
@@ -43,21 +51,17 @@ class TaskModel {
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
       'userId': userId,
       'assignee': assignee,
+      'comments': comments,
+      'readBy': readBy,
     };
   }
 
-  // --- UPDATED: Safe getter for the UI that includes Time! ---
   String get formattedDate {
     if (createdAt == null) return "Just now";
-
-    // Get the hour and minute
     final hour = createdAt!.hour;
-    final minute = createdAt!.minute.toString().padLeft(2, '0'); // Adds a leading zero (e.g., 12:05)
+    final minute = createdAt!.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'PM' : 'AM';
-
-    // Convert 24-hour time to standard 12-hour time
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-
     return "${createdAt!.month}/${createdAt!.day}/${createdAt!.year}  •  $displayHour:$minute $period";
   }
 }
