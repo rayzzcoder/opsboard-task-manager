@@ -6,7 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/task_model.dart';
-import '../services/pdf_service.dart'; // <-- NEW: Added PDF Service Import
+import '../services/pdf_service.dart';
+import 'analytics_tab.dart'; // <-- NEW: Imported the Analytics Tab
 import 'login_screen.dart';
 import 'team_dashboard_screen.dart';
 
@@ -366,12 +367,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // --- NEW: PDF EXPORT BUTTON ---
                       IconButton(
                         icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
                         tooltip: 'Export Report',
                         onPressed: () async {
-                          // Fetch absolute latest data so new chats are included
                           final doc = await FirebaseFirestore.instance.collection('tasks').doc(initialTask.id).get();
                           if (doc.exists) {
                             final latestTask = TaskModel.fromMap(doc.data()!, doc.id);
@@ -379,7 +378,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           }
                         },
                       ),
-                      // ------------------------------
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white70),
                         onPressed: () => Navigator.pop(context),
@@ -872,14 +870,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
+
+    // --- UPDATED: Added AnalyticsTab as index 1 ---
     final List<Widget> pages = [
       _buildIncidentsTab(taskProvider),
+      const AnalyticsTab(), // <-- NEW TAB INJECTED HERE
       _buildTeamTab(),
       _buildProfileTab(),
     ];
 
+    // --- UPDATED: Added Analytics Title ---
     final List<String> pageTitles = [
       'OpsBoard ($_userRole)',
+      'Operations Analytics',
       'Team Directory',
       'Account Settings',
     ];
@@ -957,6 +960,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : null,
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _selectedIndex,
+          type: BottomNavigationBarType.fixed, // --- REQUIRED for 4+ tabs to render properly!
           onTap: (index) {
             setState(() {
               _selectedIndex = index;
@@ -969,6 +973,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard),
               label: 'Incidents',
+            ),
+            // --- NEW: Analytics Tab Button ---
+            BottomNavigationBarItem(
+              icon: Icon(Icons.insert_chart_outlined),
+              activeIcon: Icon(Icons.insert_chart),
+              label: 'Analytics',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.people_outline),

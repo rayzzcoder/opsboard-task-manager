@@ -6,6 +6,15 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 20 (Visual Analytics Engine)
+* **Current State:** Engineered a dedicated `AnalyticsTab` using the `fl_chart` package to render real-time, interactive data visualizations. Developed dynamic data processing logic to compute active incident severity breakdowns (Donut Chart) and live team workload distribution (Bar Chart) directly from the `TaskProvider` state. Upgraded the main `DashboardScreen` routing and `BottomNavigationBar` to support a 4-tab fixed layout without visual clipping.
+* **Completed Files:**
+  * `lib/screens/analytics_tab.dart` (NEW)
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Packages Added:** `fl_chart`
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 19 (PDF Export Engine)
 * **Current State:** Engineered a dedicated `PdfService` utilizing the `pdf` and `printing` packages to generate professional, enterprise-grade Incident Reports. The engine parses real-time Firestore document data—including color-coded severity badges, metadata, descriptions, and the complete Activity Log—into a dynamically drawn A4 document. Implemented character sanitization (swapping UI bullets for PDF-safe hyphens) to ensure flawless cross-platform rendering. Wired the export trigger directly into the Activity Log modal, utilizing the native OS share sheet for saving, printing, and emailing.
 * **Completed Files:**
