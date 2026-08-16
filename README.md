@@ -6,6 +6,16 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 19 (PDF Export Engine)
+* **Current State:** Engineered a dedicated `PdfService` utilizing the `pdf` and `printing` packages to generate professional, enterprise-grade Incident Reports. The engine parses real-time Firestore document data—including color-coded severity badges, metadata, descriptions, and the complete Activity Log—into a dynamically drawn A4 document. Implemented character sanitization (swapping UI bullets for PDF-safe hyphens) to ensure flawless cross-platform rendering. Wired the export trigger directly into the Activity Log modal, utilizing the native OS share sheet for saving, printing, and emailing.
+* **Completed Files:**
+  * `lib/services/pdf_service.dart` (NEW)
+  * `lib/screens/dashboard_screen.dart`
+  * `lib/screens/team_dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
+* **Packages Added:** `pdf`, `printing`
+* **Status:** Completed & Successfully Pushed.
+
 ### 📝 OpsBoard Progress Report: Module 18 (Dedicated Workspaces & Real-Time Data Streaming)
 * **Current State:** Engineered dedicated Team Command Centers featuring dynamic visual routing, unique headers, and isolated Firestore streams. Upgraded the Incident Activity Log from a static form to a live, real-time chat interface utilizing Firebase `StreamBuilder` for instant message delivery without closing the UI. Implemented a custom `PopScope` navigation interceptor to provide sequential, intuitive swipe-back routing (Profile ➔ Teams ➔ Incidents) preventing accidental app closures. Redesigned the global dashboard analytics banner to display 4 distinct states, paired with instant visual color-coding for all ticket statuses (Open, In Progress, Resolved).
 * **Completed Files:**
@@ -188,3 +198,13 @@ A professional, feature-driven Flutter application designed to track operational
   * `lib/screens/signup_screen.dart`
 * **Packages Added:** `firebase_auth`, `cloud_firestore`
 * **Status:** Completed & Successfully Pushed to GitHub.
+
+---
+
+## ⚠️ Important Configuration Note: Firebase Security Rules
+OpsBoard is currently operating under Firebase "Test Mode" security rules with a hardcoded expiration date.
+* **Current Expiration Date:** September 14, 2026.
+* **Symptom of Expiration:** If the application suddenly fails to load data, hides features, or automatically downgrades all users to the default `Agent` & `Unassigned` roles, the security rules have expired.
+* **How to Fix:** Navigate to **Firebase Console ➔ Firestore Database ➔ Rules** and update the `timestamp.date(YYYY, MM, DD)` to a future date.
+
+---

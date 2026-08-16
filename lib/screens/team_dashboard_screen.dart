@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/task_model.dart';
 import '../providers/task_provider.dart';
 import '../services/firestore_service.dart';
+import '../services/pdf_service.dart'; // <-- NEW: Added PDF Service Import
 
 class TeamDashboardScreen extends StatefulWidget {
   final String teamName;
@@ -95,6 +96,20 @@ class _TeamDashboardScreenState extends State<TeamDashboardScreen> {
                       Expanded(
                         child: Text('Activity Log: ${initialTask.title}', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                       ),
+                      // --- NEW: PDF EXPORT BUTTON ---
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                        tooltip: 'Export Report',
+                        onPressed: () async {
+                          // Fetch absolute latest data so new chats are included
+                          final doc = await FirebaseFirestore.instance.collection('tasks').doc(initialTask.id).get();
+                          if (doc.exists) {
+                            final latestTask = TaskModel.fromMap(doc.data()!, doc.id);
+                            await PdfService.generateAndShareIncidentReport(latestTask);
+                          }
+                        },
+                      ),
+                      // ------------------------------
                       IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () => Navigator.pop(context))
                     ],
                   ),

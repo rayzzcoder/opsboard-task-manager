@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/task_model.dart';
+import '../services/pdf_service.dart'; // <-- NEW: Added PDF Service Import
 import 'login_screen.dart';
 import 'team_dashboard_screen.dart';
 
@@ -365,6 +366,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      // --- NEW: PDF EXPORT BUTTON ---
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                        tooltip: 'Export Report',
+                        onPressed: () async {
+                          // Fetch absolute latest data so new chats are included
+                          final doc = await FirebaseFirestore.instance.collection('tasks').doc(initialTask.id).get();
+                          if (doc.exists) {
+                            final latestTask = TaskModel.fromMap(doc.data()!, doc.id);
+                            await PdfService.generateAndShareIncidentReport(latestTask);
+                          }
+                        },
+                      ),
+                      // ------------------------------
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white70),
                         onPressed: () => Navigator.pop(context),
