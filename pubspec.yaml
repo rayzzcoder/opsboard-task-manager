@@ -41,6 +41,8 @@ dependencies:
   pdf: ^3.13.0
   printing: ^5.15.0
   fl_chart: ^1.2.0
+  shared_preferences: ^2.5.5
+  google_mobile_ads: ^9.1.0
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +54,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -94,3 +97,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/app_icon.jfif"

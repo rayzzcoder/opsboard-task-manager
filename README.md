@@ -6,6 +6,19 @@ A professional, feature-driven Flutter application designed to track operational
 
 ## Project Progress & Changelog
 
+### 📝 OpsBoard Progress Report: Module 21 (Monetization & Test Suite)
+* **Current State:** Finalized the capstone application for production release. Engineered a seamless monetization layer by integrating Google AdMob `BannerAd` components directly into the main stateful scaffold without disrupting UX or team command center workflows. Developed a robust Unit Testing suite using `flutter_test` to validate `TaskModel` JSON parsing, default fallbacks, and DateTime formatting logic. Configured native Android (`AndroidManifest.xml`) and iOS (`Info.plist`) properties for secure AdMob initialization.
+* **Completed Files:**
+  * `lib/main.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `lib/widgets/ad_banner_widget.dart` (NEW)
+  * `test/task_model_test.dart` (NEW)
+  * `android/app/src/main/AndroidManifest.xml`
+  * `ios/Runner/Info.plist`
+  * `README.md` (Cumulative Tracker)
+* **Packages Added:** `google_mobile_ads`, `flutter_test`
+* **Status:** Completed, Tested, & Production-Ready.
+
 ### 📝 OpsBoard Progress Report: Module 20 (Visual Analytics Engine)
 * **Current State:** Engineered a dedicated `AnalyticsTab` using the `fl_chart` package to render real-time, interactive data visualizations. Developed dynamic data processing logic to compute active incident severity breakdowns (Donut Chart) and live team workload distribution (Bar Chart) directly from the `TaskProvider` state. Upgraded the main `DashboardScreen` routing and `BottomNavigationBar` to support a 4-tab fixed layout without visual clipping.
 * **Completed Files:**
@@ -61,35 +74,35 @@ A professional, feature-driven Flutter application designed to track operational
 ### 📝 OpsBoard Progress Report: Module 14 (Chronological Ordering & Data Safeguards)
 * **Current State:** Upgraded the database schema and UI to support precise chronological incident tracking. Integrated a `createdAt` timestamp in `TaskModel` with 12-hour AM/PM formatting. Updated `FirestoreService` to enforce `.orderBy()` sorting, ensuring the newest incidents always render at the top of the global board. Implemented a robust `AlertDialog` guardrail in the UI to prevent accidental deletions by Admins.
 * **Completed Files:**
-    * `lib/models/task_model.dart`
-    * `lib/services/firestore_service.dart`
-    * `lib/providers/task_provider.dart`
-    * `lib/screens/dashboard_screen.dart`
-    * `README.md` (Cumulative Tracker)
+  * `lib/models/task_model.dart`
+  * `lib/services/firestore_service.dart`
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
 * **Status:** Completed & Successfully Pushed.
 
 ### 📝 OpsBoard Progress Report: Module 13 (Infinite Scrolling & Pagination)
 * **Current State:** Engineered stream-based pagination to handle enterprise-scale ticket volumes without performance degradation or excessive database reads. Integrated a `ScrollController` in `DashboardScreen` to detect scroll boundaries, and dynamically manage a `StreamSubscription` in `TaskProvider` that scales the Firestore document limit seamlessly.
 * **Completed Files:**
-    * `lib/services/firestore_service.dart`
-    * `lib/providers/task_provider.dart`
-    * `lib/screens/dashboard_screen.dart`
-    * `README.md` (Cumulative Tracker)
+  * `lib/services/firestore_service.dart`
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
 * **Status:** Completed & Successfully Pushed.
 
 ### 📝 OpsBoard Progress Report: Module 12 (Internal Routing & Navigation)
 * **Current State:** Transformed the application from a single-screen view into a multi-page enterprise scaffolding. Implemented a persistent `BottomNavigationBar` with stateful indexed routing. Segmented UI into `Incidents`, `Teams`, and `Profile` tabs. Engineered dynamic AppBar titles and context-aware Floating Action Buttons that respond to the active navigation state.
 * **Completed Files:**
-    * `lib/screens/dashboard_screen.dart`
-    * `README.md` (Cumulative Tracker)
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
 * **Status:** Completed & Successfully Pushed.
 
 ### 📝 OpsBoard Progress Report: Module 11 (Full CRUD & Edit Engine)
 * **Current State:** Implemented the final missing 'U' in CRUD operations. Added `editTaskDetails` to `TaskProvider` for full document updates. Designed and integrated `_showEditTaskModal` in `DashboardScreen`, allowing Admins to modify incident titles, descriptions, severities, and team assignments dynamically. Restricted edit UI access strictly to Admin roles.
 * **Completed Files:**
-    * `lib/providers/task_provider.dart`
-    * `lib/screens/dashboard_screen.dart`
-    * `README.md` (Cumulative Tracker)
+  * `lib/providers/task_provider.dart`
+  * `lib/screens/dashboard_screen.dart`
+  * `README.md` (Cumulative Tracker)
 * **Status:** Completed & Successfully Pushed.
 
 ### 📝 OpsBoard Progress Report: Module 10 (Role-Based Access Control & Security)
@@ -215,5 +228,3 @@ OpsBoard is currently operating under Firebase "Test Mode" security rules with a
 * **Current Expiration Date:** September 14, 2026.
 * **Symptom of Expiration:** If the application suddenly fails to load data, hides features, or automatically downgrades all users to the default `Agent` & `Unassigned` roles, the security rules have expired.
 * **How to Fix:** Navigate to **Firebase Console ➔ Firestore Database ➔ Rules** and update the `timestamp.date(YYYY, MM, DD)` to a future date.
-
----

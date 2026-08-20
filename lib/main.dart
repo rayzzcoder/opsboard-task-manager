@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart'; // <-- 1. NEW: Import AdMob
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/task_provider.dart';
@@ -12,6 +13,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // <-- 2. NEW: Initialize the Ads engine before the app starts
+  await MobileAds.instance.initialize();
 
   runApp(const TaskManagerApp());
 }

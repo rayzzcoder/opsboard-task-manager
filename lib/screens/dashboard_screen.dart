@@ -7,7 +7,8 @@ import '../providers/task_provider.dart';
 import '../providers/theme_provider.dart';
 import '../models/task_model.dart';
 import '../services/pdf_service.dart';
-import 'analytics_tab.dart'; // <-- NEW: Imported the Analytics Tab
+import '../widgets/ad_banner_widget.dart'; // <-- 1. IMPORT AD BANNER WIDGET
+import 'analytics_tab.dart';
 import 'login_screen.dart';
 import 'team_dashboard_screen.dart';
 
@@ -871,15 +872,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
 
-    // --- UPDATED: Added AnalyticsTab as index 1 ---
     final List<Widget> pages = [
       _buildIncidentsTab(taskProvider),
-      const AnalyticsTab(), // <-- NEW TAB INJECTED HERE
+      const AnalyticsTab(),
       _buildTeamTab(),
       _buildProfileTab(),
     ];
 
-    // --- UPDATED: Added Analytics Title ---
     final List<String> pageTitles = [
       'OpsBoard ($_userRole)',
       'Operations Analytics',
@@ -958,37 +957,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           label: const Text('New Incident'),
         )
             : null,
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          type: BottomNavigationBarType.fixed, // --- REQUIRED for 4+ tabs to render properly!
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          selectedItemColor: Colors.blueGrey.shade700,
-          unselectedItemColor: Colors.grey.shade400,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Incidents',
-            ),
-            // --- NEW: Analytics Tab Button ---
-            BottomNavigationBarItem(
-              icon: Icon(Icons.insert_chart_outlined),
-              activeIcon: Icon(Icons.insert_chart),
-              label: 'Analytics',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline),
-              activeIcon: Icon(Icons.people),
-              label: 'Teams',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
+        // --- 2. WRAPPED BOTTOM NAVIGATION BAR WITH COLUMN TO HOST AD BANNER ---
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AdBannerWidget(), // <-- Banner Ad displays directly above tabs
+            BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              type: BottomNavigationBarType.fixed,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              selectedItemColor: Colors.blueGrey.shade700,
+              unselectedItemColor: Colors.grey.shade400,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard_outlined),
+                  activeIcon: Icon(Icons.dashboard),
+                  label: 'Incidents',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.insert_chart_outlined),
+                  activeIcon: Icon(Icons.insert_chart),
+                  label: 'Analytics',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.people_outline),
+                  activeIcon: Icon(Icons.people),
+                  label: 'Teams',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
+              ],
             ),
           ],
         ),
